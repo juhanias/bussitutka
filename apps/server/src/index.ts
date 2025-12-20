@@ -1,0 +1,286 @@
+import { Elysia } from "elysia";
+import { resolve, extname } from "node:path";
+import { existsSync } from "node:fs";
+
+import { loadGtfsDataset } from "./gtfs/loader";
+import { buildStopSchedule, buildStopScheduleRange } from "./gtfs/schedule";
+import type { GtfsData } from "./gtfs/types";
+
+const SIRI_VM_URL = process.env.SIRI_VM_URL ?? "https://data.foli.fi/siri/vm";
+const POLL_INTERVAL_MS = Number(process.env.SIRI_POLL_INTERVAL_MS ?? 4000);
+const STALE_AFTER_MS = Number(process.env.SIRI_STALE_AFTER_MS ?? 20000);
+const MAX_IDS_PER_REQUEST = Number(process.env.SIRI_MAX_IDS_PER_REQUEST ?? 200);
+const GTFS_REFRESH_INTERVAL_MS = Number(
+	process.env.GTFS_REFRESH_INTERVAL_MS ?? 6 * 60 * 60 * 1000,
+);
+
+type SiriVehicle = {
+	vehicleref?: string;
+	lineref?: string;
+	destinationname?: string;
+	next_stoppointname?: string;
+	delaysecs?: number;
+	latitude?: number;
+	longitude?: number;
+};
+
+type SiriVmResponse = {
+	result?: {
+		vehicles?: Record<string, SiriVehicle>;
+		responsetimestamp?: number;
+	};
+};
+
+type VehicleSnapshot = {
+	vehicleref: string;
+	lineref: string;
+	destinationname: string;
+	next_stoppointname: string;
+	delaysecs: number;
+	latitude: number;
+	longitude: number;
+};
+
+type IdInput = { ids?: string | string[] } | undefined;
+
+const vehicleCache = new Map<string, VehicleSnapshot>();
+let lastUpdated: number | null = null;
+let lastSourceTimestamp: number | null = null;
+let lastError: string | null = null;
+
+let gtfsData: GtfsData | null = null;
+let gtfsLoadedFrom: string | null = null;
+let gtfsLastRefresh: number | null = null;
+let gtfsLoadingPromise: Promise<void> | null = null;
+
+const parseIdsFromString = (raw?: string): string[] =>
+	raw
+		?.split(",")
+		.map((id) => id.trim())
+		.filter(Boolean) ?? [];
+
+const normalizeIds = (input: IdInput): string[] => {
+	const raw = input?.ids;
+
+	if (!raw) return [];
+
+	const ids = Array.isArray(raw)
+		? raw.map((id) => id.trim()).filter(Boolean)
+		: parseIdsFromString(raw);
+
+	// dedupe to keep payloads smaller
+	return Array.from(new Set(ids)).slice(0, MAX_IDS_PER_REQUEST);
+};
+
+const normalizeVehicle = (raw: SiriVehicle): VehicleSnapshot | null => {
+	if (!raw?.vehicleref) return null;
+	if (typeof raw.latitude !== "number" || typeof raw.longitude !== "number") {
+		return null;
+	}
+
+	return {
+		vehicleref: raw.vehicleref,
+		lineref: raw.lineref ?? "",
+		destinationname: raw.destinationname ?? "",
+		next_stoppointname: raw.next_stoppointname ?? "",
+		delaysecs: typeof raw.delaysecs === "number" ? raw.delaysecs : 0,
+		latitude: raw.latitude,
+		longitude: raw.longitude,
+	};
+};
+
+const refreshVehicleCache = async () => {
+	try {
+		const response = await fetch(SIRI_VM_URL);
+		if (!response.ok) {
+			throw new Error(`siri vm responded with ${response.status}`);
+		}
+
+		const payload = (await response.json()) as SiriVmResponse;
+		const vehicles = payload.result?.vehicles ?? {};
+		vehicleCache.clear();
+
+		for (const raw of Object.values(vehicles)) {
+			const vehicle = normalizeVehicle(raw as SiriVehicle);
+			if (vehicle) {
+				vehicleCache.set(vehicle.vehicleref, vehicle);
+			}
+		}
+
+		lastUpdated = Date.now();
+		lastSourceTimestamp = payload.result?.responsetimestamp ?? null;
+		lastError = null;
+	} catch (error) {
+		lastError = error instanceof Error ? error.message : "unknown error";
+	}
+};
+
+const startPolling = () => {
+	// keep polling server-side so the browser does not have to pull the full VM payload
+	void refreshVehicleCache();
+	setInterval(refreshVehicleCache, POLL_INTERVAL_MS);
+};
+
+const buildVehicleList = (ids: string[]): VehicleSnapshot[] => {
+	const list: VehicleSnapshot[] = [];
+
+	for (const id of ids) {
+		const vehicle = vehicleCache.get(id);
+		if (vehicle) {
+			list.push(vehicle);
+		}
+	}
+
+	return list;
+};
+
+const buildVehicleResponse = (
+	ids: string[],
+	set: { status: number; headers: Record<string, string> },
+) => {
+	if (!ids.length) {
+		set.status = 400;
+		return { status: "error", message: "ids required" };
+	}
+
+	set.headers["Cache-Control"] = "no-store";
+	const vehicles = buildVehicleList(ids);
+	return {
+		status: "ok",
+		vehicles,
+		lastUpdated,
+		sourceTimestamp: lastSourceTimestamp,
+		cacheSize: vehicleCache.size,
+		stale: lastUpdated ? Date.now() - lastUpdated > STALE_AFTER_MS : true,
+		error: lastError,
+	};
+};
+
+const refreshGtfs = async () => {
+	if (gtfsLoadingPromise) return gtfsLoadingPromise;
+	gtfsLoadingPromise = (async () => {
+		try {
+			const { data, loadedFrom } = await loadGtfsDataset();
+			gtfsData = data;
+			gtfsLoadedFrom = loadedFrom;
+			gtfsLastRefresh = Date.now();
+			console.log(`GTFS dataset loaded (${data.datasetId}) from ${loadedFrom}`);
+		} catch (error) {
+			console.error("Failed to load GTFS dataset", error);
+		} finally {
+			gtfsLoadingPromise = null;
+		}
+	})();
+	return gtfsLoadingPromise;
+};
+
+startPolling();
+void refreshGtfs();
+setInterval(() => {
+	void refreshGtfs();
+}, GTFS_REFRESH_INTERVAL_MS);
+
+const publicDir = resolve(import.meta.dir, '../public');
+
+const getMimeType = (filepath: string): string => {
+	const ext = extname(filepath).toLowerCase();
+	const mimeTypes: Record<string, string> = {
+		'.html': 'text/html',
+		'.js': 'application/javascript',
+		'.css': 'text/css',
+		'.json': 'application/json',
+		'.svg': 'image/svg+xml',
+		'.png': 'image/png',
+		'.jpg': 'image/jpeg',
+		'.jpeg': 'image/jpeg',
+		'.webmanifest': 'application/manifest+json',
+		'.ico': 'image/x-icon',
+	};
+	return mimeTypes[ext] || 'application/octet-stream';
+};
+
+const app = new Elysia()
+	.get("/test-file", () => Bun.file("public/vite.svg"))
+	.get("/api/health", () => ({
+		status: "ok",
+		vehiclesCached: vehicleCache.size,
+		lastUpdated,
+		sourceTimestamp: lastSourceTimestamp,
+		pollIntervalMs: POLL_INTERVAL_MS,
+		stale: lastUpdated ? Date.now() - lastUpdated > STALE_AFTER_MS : true,
+		error: lastError,
+		datasetId: gtfsData?.datasetId ?? null,
+		gtfsLastRefresh,
+		gtfsLoadedFrom,
+	}))
+	.get("/api/vehicles", ({ query, set }) => {
+		const ids = normalizeIds(query as IdInput);
+		return buildVehicleResponse(ids, set);
+	})
+	.post("/api/vehicles", ({ body, set }) => {
+		// allow POST bodies to avoid very long query strings when tracking many vehicles
+		const ids = normalizeIds(body as IdInput);
+		return buildVehicleResponse(ids, set);
+	})
+	.get("/api/gtfs/status", () => ({
+		status: gtfsData ? "ok" : "loading",
+		datasetId: gtfsData?.datasetId ?? null,
+		gtfsLastRefresh,
+		gtfsLoadedFrom,
+	}))
+	.post("/api/schedule/stop", ({ body, set }) => {
+		const { stopCode, limit, now, days, maxPerDay } = body as {
+			stopCode?: string;
+			limit?: number;
+			now?: number;
+			days?: number;
+			maxPerDay?: number;
+		};
+
+		if (!stopCode) {
+			set.status = 400;
+			return { status: "error", message: "stopCode required" };
+		}
+
+		if (!gtfsData) {
+			set.status = 503;
+			return { status: "error", message: "gtfs dataset not ready" };
+		}
+
+		const nowDate = now ? new Date(now) : new Date();
+		set.headers["Cache-Control"] = "no-store";
+		if (days && days > 1) {
+			return buildStopScheduleRange(
+				gtfsData,
+				stopCode,
+				nowDate,
+				days,
+				maxPerDay,
+			);
+		}
+		return buildStopSchedule(gtfsData, stopCode, nowDate, limit);
+	})
+	.get('*', ({ path, set }) => {
+		// serve static files from public directory
+		let filepath = path === '/' ? '/index.html' : path;
+		const fullPath = resolve(publicDir, filepath.slice(1));
+		
+		// security check: ensure the resolved path is within publicDir
+		if (!fullPath.startsWith(publicDir)) {
+			set.status = 403;
+			return 'Forbidden';
+		}
+		
+		if (!existsSync(fullPath)) {
+			set.status = 404;
+			return 'Not Found';
+		}
+		
+		set.headers['Content-Type'] = getMimeType(fullPath);
+		return Bun.file(fullPath);
+	})
+	.listen(3000);
+
+console.log(
+	`🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`,
+);

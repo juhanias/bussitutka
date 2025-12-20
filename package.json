@@ -1,0 +1,14 @@
+{
+  "name": "bussitutka",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "concurrently \"bun run dev:server\" \"bun run dev:web\" --names \"server,web\" --prefix-colors \"blue,green\"",
+    "dev:server": "cd apps/server && bun run dev",
+    "dev:web": "cd apps/web && bun run dev",
+		"start:server": "cd apps/server && bun run start",
+		"build:web": "cd apps/web && bun run build",
+		"preview": "bun run build:web && bun run start:server",
+		"run": "bun install && bun run build:web && bun run start:server"
+  },
+  "workspaces": ["apps/*"]
+}

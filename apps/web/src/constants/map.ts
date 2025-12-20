@@ -1,0 +1,2 @@
+export const ANIMATION_DURATION = 4000;
+export const MIN_DISTANCE_FOR_BEARING = 0.00005;

@@ -1,0 +1,60 @@
+name: bussit.juh.fi
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: 'main'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Get commit message and check for skip hint
+        id: commit_details
+        run: |
+          COMMIT_MESSAGE="${{ github.event.head_commit.message }}"
+          echo "Commit Message: $COMMIT_MESSAGE"
+          
+          # Check if commit message contains skip deployment hint
+          if [[ "$COMMIT_MESSAGE" == *"[skip-deploy]"* ]] || [[ "$COMMIT_MESSAGE" == *"[no-deploy]"* ]]; then
+            echo "skip_deploy=true" >> $GITHUB_OUTPUT
+            echo "Deployment will be skipped"
+          else
+            echo "skip_deploy=false" >> $GITHUB_OUTPUT
+            echo "Deployment will proceed"
+          fi
+
+      - name: Build and push Docker image
+        if: steps.commit_details.outputs.skip_deploy == 'false'
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+          DOCKER_REPO: ${{ secrets.DOCKER_REPO }}
+        run: |
+          RELEASE_CODE=${{ github.sha }}
+          docker build -t bussitutka .
+          docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
+          docker tag bussitutka $DOCKER_USERNAME/$DOCKER_REPO:$RELEASE_CODE
+          docker push $DOCKER_USERNAME/$DOCKER_REPO:$RELEASE_CODE
+
+      - name: SSH into remote server and activate container
+        if: steps.commit_details.outputs.skip_deploy == 'false'
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USERNAME }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          port: ${{ secrets.SERVER_PORT }}
+          script: |
+            sudo DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }} \
+            DOCKER_PASSWORD=${{ secrets.DOCKER_PASSWORD }} \
+            DOCKER_REPO=${{ secrets.DOCKER_REPO }} \
+            RELEASE_CODE=${{ github.sha }} \
+            /usr/local/bin/deploy_bussitutka.sh
