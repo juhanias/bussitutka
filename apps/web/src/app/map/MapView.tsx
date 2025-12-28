@@ -22,7 +22,6 @@ import {
 	favoriteStopsCircleLayer,
 	favoriteStopsLabelLayer,
 	favoriteStopsShadowLayer,
-	routeArrowsLayer,
 	routesLayer,
 	routesOutlineLayer,
 	stopsCircleLayer,
@@ -44,6 +43,7 @@ type Props = {
 	onMapReady: (map: MaplibreMap) => void;
 	onMapClick: (event: MapMouseEvent) => void;
 	onMoveStart: (event: ViewStateChangeEvent) => void;
+	mapTheme: "light" | "dark";
 };
 
 export function MapView({
@@ -55,13 +55,19 @@ export function MapView({
 	onMapReady,
 	onMapClick,
 	onMoveStart,
+	mapTheme,
 }: Props) {
+	const mapStyle =
+		mapTheme === "dark"
+			? "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
+			: "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json";
+
 	return (
 		<MapGL
 			initialViewState={MAP_INITIAL_VIEW_STATE}
 			minZoom={MAP_MIN_ZOOM}
 			style={{ width: "100%", height: "100%" }}
-			mapStyle="https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json"
+			mapStyle={mapStyle}
 			onClick={onMapClick}
 			onLoad={(event) => {
 				registerMapImages(event.target);
@@ -89,17 +95,16 @@ export function MapView({
 			<Source id="routes" type="geojson" data={routesGeojson}>
 				<Layer {...routesOutlineLayer} />
 				<Layer {...routesLayer} />
-				<Layer {...routeArrowsLayer} />
 			</Source>
 			<Source id="bus-stops" type="geojson" data={stopsGeojson}>
 				<Layer {...stopsShadowLayer} />
-				<Layer {...stopsCircleLayer} />
-				<Layer {...stopsLabelLayer} />
+				<Layer {...stopsCircleLayer(mapTheme)} />
+				<Layer {...stopsLabelLayer(mapTheme)} />
 			</Source>
 			<Source id="favorite-stops" type="geojson" data={favoriteStopsGeojson}>
 				<Layer {...favoriteStopsShadowLayer} />
-				<Layer {...favoriteStopsCircleLayer} />
-				<Layer {...favoriteStopsLabelLayer} />
+				<Layer {...favoriteStopsCircleLayer(mapTheme)} />
+				<Layer {...favoriteStopsLabelLayer(mapTheme)} />
 			</Source>
 			<Source id="buses" type="geojson" data={busesGeojson}>
 				<Layer {...busesOutlineLayer} />

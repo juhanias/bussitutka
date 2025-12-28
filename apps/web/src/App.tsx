@@ -1,5 +1,14 @@
 import type { FeatureCollection, LineString, Point } from "geojson";
-import { Download, Home, Loader2, LocateFixed, Search, Star } from "lucide-react";
+import {
+	Download,
+	Home,
+	Loader2,
+	LocateFixed,
+	Moon,
+	Search,
+	Star,
+	Sun,
+} from "lucide-react";
 import type { Map as MaplibreMap } from "maplibre-gl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -48,6 +57,13 @@ function App() {
 		lat: number;
 		lon: number;
 	} | null>(null);
+	const [mapTheme, setMapTheme] = useState<"light" | "dark">("light");
+
+	const floatingActionButtonClass =
+		"pointer-events-auto inline-flex h-10 items-center justify-center gap-2 rounded-full border px-4 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 " +
+		(mapTheme === "dark"
+			? "border-black/20 bg-white/80 text-black hover:border-black/40 hover:bg-white/90"
+			: "border-white/10 bg-black/75 text-white hover:border-white/40 hover:bg-black/85");
 
 	const handleLocateMe = useCallback(() => {
 		if (typeof navigator === "undefined" || !navigator.geolocation) {
@@ -151,7 +167,10 @@ function App() {
 		handleClose();
 		if (!mapRef) return;
 		mapRef.flyTo({
-			center: [MAP_INITIAL_VIEW_STATE.longitude, MAP_INITIAL_VIEW_STATE.latitude],
+			center: [
+				MAP_INITIAL_VIEW_STATE.longitude,
+				MAP_INITIAL_VIEW_STATE.latitude,
+			],
 			zoom: MAP_INITIAL_VIEW_STATE.zoom,
 			bearing: 0,
 			pitch: 0,
@@ -207,10 +226,11 @@ function App() {
 	const busesGeojson = useMemo<FeatureCollection<Point>>(() => {
 		const vehiclesToRender = Array.from(animatedPositions.values());
 		const activeLineFilter = isMobileView ? mobileLineFilterRef : null;
-		const filteredVehicles =
-			activeLineFilter
-				? vehiclesToRender.filter((vehicle) => vehicle.lineref === activeLineFilter)
-				: vehiclesToRender;
+		const filteredVehicles = activeLineFilter
+			? vehiclesToRender.filter(
+					(vehicle) => vehicle.lineref === activeLineFilter,
+				)
+			: vehiclesToRender;
 
 		return {
 			type: "FeatureCollection",
@@ -278,6 +298,10 @@ function App() {
 				event.preventDefault();
 				setIsSearchOpen(true);
 			}
+			if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
+				event.preventDefault();
+				setIsFavoritesOpen(true);
+			}
 		};
 
 		window.addEventListener("keydown", handleShortcut);
@@ -314,14 +338,22 @@ function App() {
 					<button
 						type="button"
 						onClick={() => setIsSearchOpen(true)}
-						className="pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/75 text-white transition-colors hover:border-white/40 hover:bg-black/85 sm:w-auto sm:px-4"
+						className={`pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full border transition-colors sm:w-auto sm:px-4 ${
+							mapTheme === "dark"
+								? "border-black/20 bg-white/80 text-black hover:border-black/40 hover:bg-white/90"
+								: "border-white/10 bg-black/75 text-white hover:border-white/40 hover:bg-black/85"
+						}`}
 						aria-label="Hae pysäkkejä"
 					>
 						<Search className="h-5 w-5 sm:mr-2" />
 						<span className="hidden text-sm font-medium sm:inline">
 							Hae pysäkkejä
 						</span>
-						<span className="ml-2 hidden text-xs text-white/50 sm:inline">
+						<span
+							className={`ml-2 hidden text-xs sm:inline ${
+								mapTheme === "dark" ? "text-black/50" : "text-white/50"
+							}`}
+						>
 							ctrl + f
 						</span>
 					</button>
@@ -329,12 +361,47 @@ function App() {
 					<button
 						type="button"
 						onClick={() => setIsFavoritesOpen(true)}
-						className="pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/75 text-white transition-colors hover:border-white/40 hover:bg-black/85 sm:w-auto sm:px-4"
+						className={`pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full border transition-colors sm:w-auto sm:px-4 ${
+							mapTheme === "dark"
+								? "border-black/20 bg-white/80 text-black hover:border-black/40 hover:bg-white/90"
+								: "border-white/10 bg-black/75 text-white hover:border-white/40 hover:bg-black/85"
+						}`}
 						aria-label="Suosikit"
 					>
 						<Star className="h-5 w-5 sm:mr-2" />
 						<span className="hidden text-sm font-medium sm:inline">
 							Suosikit
+						</span>
+						<span
+							className={`ml-2 hidden text-xs sm:inline ${
+								mapTheme === "dark" ? "text-black/50" : "text-white/50"
+							}`}
+						>
+							ctrl + s
+						</span>
+					</button>
+
+					<button
+						type="button"
+						onClick={() => setMapTheme(mapTheme === "light" ? "dark" : "light")}
+						className={`pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full border transition-colors sm:w-auto sm:px-4 ${
+							mapTheme === "dark"
+								? "border-black/20 bg-white/80 text-black hover:border-black/40 hover:bg-white/90"
+								: "border-white/10 bg-black/75 text-white hover:border-white/40 hover:bg-black/85"
+						}`}
+						aria-label={
+							mapTheme === "light"
+								? "Vaihda tummaan teemaan"
+								: "Vaihda vaaleaan teemaan"
+						}
+					>
+						{mapTheme === "light" ? (
+							<Moon className="h-5 w-5 sm:mr-2" />
+						) : (
+							<Sun className="h-5 w-5 sm:mr-2" />
+						)}
+						<span className="hidden text-sm font-medium sm:inline">
+							{mapTheme === "light" ? "Tumma" : "Vaalea"}
 						</span>
 					</button>
 
@@ -342,7 +409,11 @@ function App() {
 						<button
 							type="button"
 							onClick={install}
-							className="pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/75 text-white transition-colors hover:border-white/40 hover:bg-black/85 sm:w-auto sm:px-4"
+							className={`pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full border transition-colors sm:w-auto sm:px-4 ${
+								mapTheme === "dark"
+									? "border-black/20 bg-white/80 text-black hover:border-black/40 hover:bg-white/90"
+									: "border-white/10 bg-black/75 text-white hover:border-white/40 hover:bg-black/85"
+							}`}
 							aria-label="install app"
 						>
 							<Download className="h-5 w-5 sm:mr-2" />
@@ -358,7 +429,7 @@ function App() {
 						type="button"
 						onClick={handleHome}
 						disabled={!mapRef}
-						className="pointer-events-auto inline-flex h-10 items-center justify-center gap-2 rounded-full border border-white/10 bg-black/75 px-4 text-sm font-medium text-white transition-colors hover:border-white/40 hover:bg-black/85 disabled:cursor-not-allowed disabled:opacity-60"
+						className={floatingActionButtonClass}
 						aria-label="Alkuun"
 					>
 						<Home className="h-4 w-4" aria-hidden="true" />
@@ -369,7 +440,7 @@ function App() {
 						type="button"
 						onClick={handleLocateMe}
 						disabled={isLocating}
-						className="pointer-events-auto inline-flex h-10 items-center justify-center gap-2 rounded-full border border-white/10 bg-black/75 px-4 text-sm font-medium text-white transition-colors hover:border-white/40 hover:bg-black/85 disabled:cursor-not-allowed disabled:opacity-60"
+						className={floatingActionButtonClass}
 						aria-label="Oma sijainti"
 					>
 						{isLocating ? (
@@ -414,6 +485,7 @@ function App() {
 					onMapReady={setMapRef}
 					onMapClick={handleMapClick}
 					onMoveStart={handleMapInteractionStart}
+					mapTheme={mapTheme}
 				/>
 			</div>
 		</>

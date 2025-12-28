@@ -63,6 +63,7 @@ export type ScheduledDepartureDto = {
 	destination: string;
 	departureTime: string; // HH:MM for display
 	departureTimestamp: number; // epoch millis
+	serviceDayOffset: number; // 0 for same calendar day, 1 for next calendar day, etc.
 	tripId: string;
 	routeColor?: string;
 	routeTextColor?: string;

@@ -31,6 +31,25 @@ interface UseStopScheduleResult {
 export function useStopSchedule(
 	stopCode: string | null,
 ): UseStopScheduleResult {
+	const formatDateLabel = (dateObj: Date) =>
+		dateObj.toLocaleDateString("fi-FI", {
+			weekday: "short",
+			day: "numeric",
+			month: "numeric",
+		});
+
+	const addDaysToDateString = (dateStr: string, days: number): string => {
+		const year = Number(dateStr.slice(0, 4));
+		const month = Number(dateStr.slice(4, 6)) - 1;
+		const day = Number(dateStr.slice(6, 8));
+		const d = new Date(Date.UTC(year, month, day));
+		d.setUTCDate(d.getUTCDate() + days);
+		const yyyy = d.getUTCFullYear();
+		const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+		const dd = String(d.getUTCDate()).padStart(2, "0");
+		return `${yyyy}${mm}${dd}`;
+	};
+
 	const [scheduleDays, setScheduleDays] = useState<ScheduleDay[]>([]);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -77,27 +96,47 @@ export function useStopSchedule(
 				},
 			];
 
-			const parsedDays: ScheduleDay[] = daysPayload.map((day) => {
+			// prepare containers for each requested day
+			const dayIndexByDate = new Map<string, number>();
+			const parsedDays: ScheduleDay[] = daysPayload.map((day, idx) => {
+				dayIndexByDate.set(day.date, idx);
 				const dateObj = new Date(
 					`${day.date.slice(0, 4)}-${day.date.slice(4, 6)}-${day.date.slice(6, 8)}`,
 				);
-				const departures = day.departures
-					.map((dep) => ({
-						...dep,
-						departureDate: new Date(dep.departureTimestamp),
-					}))
-					.sort(
-						(a, b) => a.departureDate.getTime() - b.departureDate.getTime(),
-					);
 				return {
 					date: day.date,
-					label: dateObj.toLocaleDateString("fi-FI", {
-						weekday: "short",
-						day: "numeric",
-						month: "numeric",
-					}),
-					departures,
+					label: formatDateLabel(dateObj),
+					departures: [],
 				};
+			});
+
+			// distribute departures to the correct service day, falling back to same day if target missing
+			for (const day of daysPayload) {
+				for (const dep of day.departures) {
+					const departureDate = new Date(dep.departureTimestamp);
+					const targetDate = dep.serviceDayOffset
+						? addDaysToDateString(day.date, dep.serviceDayOffset)
+						: day.date;
+					const targetIndex =
+						dayIndexByDate.get(targetDate) ?? dayIndexByDate.get(day.date);
+					if (targetIndex === undefined) continue;
+					const displayTime = departureDate.toLocaleTimeString("fi-FI", {
+						hour: "2-digit",
+						minute: "2-digit",
+					});
+					parsedDays[targetIndex].departures.push({
+						...dep,
+						departureTime: displayTime,
+						departureDate,
+					});
+				}
+			}
+
+			// sort departures inside each day chronologically
+			parsedDays.forEach((day) => {
+				day.departures.sort(
+					(a, b) => a.departureDate.getTime() - b.departureDate.getTime(),
+				);
 			});
 
 			setScheduleDays(parsedDays);

@@ -125,35 +125,4 @@ export function registerMapImages(map: MaplibreMap) {
 			data: arrowCtx.getImageData(0, 0, arrowSize, arrowSize).data,
 		});
 	}
-
-	if (!map.hasImage("route-arrow")) {
-		const routeArrowSize = 24;
-		const routeArrowCanvas = document.createElement("canvas");
-		routeArrowCanvas.width = routeArrowSize;
-		routeArrowCanvas.height = routeArrowSize;
-		const routeArrowCtx = routeArrowCanvas.getContext("2d");
-		if (!routeArrowCtx) throw new Error("2d canvas context not available");
-
-		const raCenterX = routeArrowSize / 2;
-		const raCenterY = routeArrowSize / 2;
-		routeArrowCtx.beginPath();
-		routeArrowCtx.moveTo(raCenterX - 4, raCenterY - 6);
-		routeArrowCtx.lineTo(raCenterX + 4, raCenterY);
-		routeArrowCtx.lineTo(raCenterX - 4, raCenterY + 6);
-		routeArrowCtx.strokeStyle = "#ffffff";
-		routeArrowCtx.lineWidth = 3;
-		routeArrowCtx.lineCap = "round";
-		routeArrowCtx.lineJoin = "round";
-		routeArrowCtx.stroke();
-		routeArrowCtx.strokeStyle = "#0d47a1";
-		routeArrowCtx.lineWidth = 1.5;
-		routeArrowCtx.stroke();
-
-		map.addImage("route-arrow", {
-			width: routeArrowSize,
-			height: routeArrowSize,
-			data: routeArrowCtx.getImageData(0, 0, routeArrowSize, routeArrowSize)
-				.data,
-		});
-	}
 }

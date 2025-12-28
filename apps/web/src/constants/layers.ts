@@ -54,7 +54,7 @@ export const stopsShadowLayer: LayerProps = {
 	minzoom: STOPS_MINZOOM,
 };
 
-export const stopsCircleLayer: LayerProps = {
+export const stopsCircleLayer = (theme: "light" | "dark"): LayerProps => ({
 	id: "stops-circle",
 	type: "circle",
 	paint: {
@@ -67,16 +67,16 @@ export const stopsCircleLayer: LayerProps = {
 			STOP_CIRCLE_RADIUS_ZOOM.z2,
 			STOP_CIRCLE_RADIUS_ZOOM.r2,
 		],
-		"circle-color": STOP_PRIMARY_COLOR,
-		"circle-stroke-color": "#ffffff",
+		"circle-color": theme === "dark" ? "#125ea1" : STOP_PRIMARY_COLOR,
+		"circle-stroke-color": theme === "dark" ? "#ffffff" : "#ffffff",
 		"circle-stroke-width": 2,
 		"circle-opacity": stopFadeInByZoom,
 		"circle-stroke-opacity": stopFadeInByZoom,
 	},
 	minzoom: STOPS_MINZOOM,
-};
+});
 
-export const stopsLabelLayer: LayerProps = {
+export const stopsLabelLayer = (theme: "light" | "dark"): LayerProps => ({
 	id: "stops-label",
 	type: "symbol",
 	layout: {
@@ -94,12 +94,13 @@ export const stopsLabelLayer: LayerProps = {
 		"text-max-width": 12,
 	},
 	paint: {
-		"text-color": "#333",
-		"text-halo-color": "rgba(255,255,255,0.9)",
+		"text-color": theme === "dark" ? "#ffffff" : "#333",
+		"text-halo-color":
+			theme === "dark" ? "rgba(0,0,0,0.8)" : "rgba(255,255,255,0.9)",
 		"text-halo-width": 2,
 	},
 	minzoom: STOPS_LABEL_MINZOOM,
-};
+});
 
 export const favoriteStopsShadowLayer: LayerProps = {
 	id: "favorite-stops-shadow",
@@ -123,7 +124,9 @@ export const favoriteStopsShadowLayer: LayerProps = {
 	minzoom: FAVORITE_MINZOOM,
 };
 
-export const favoriteStopsCircleLayer: LayerProps = {
+export const favoriteStopsCircleLayer = (
+	theme: "light" | "dark",
+): LayerProps => ({
 	id: "favorite-stops-circle",
 	type: "circle",
 	paint: {
@@ -139,13 +142,15 @@ export const favoriteStopsCircleLayer: LayerProps = {
 			FAVORITE_CIRCLE_RADIUS_STOPS[5],
 		],
 		"circle-color": STOP_FAVORITE_COLOR,
-		"circle-stroke-color": "#ffffff",
+		"circle-stroke-color": theme === "dark" ? "#ffffff" : "#ffffff",
 		"circle-stroke-width": 2.5,
 	},
 	minzoom: FAVORITE_MINZOOM,
-};
+});
 
-export const favoriteStopsLabelLayer: LayerProps = {
+export const favoriteStopsLabelLayer = (
+	theme: "light" | "dark",
+): LayerProps => ({
 	id: "favorite-stops-label",
 	type: "symbol",
 	layout: {
@@ -157,12 +162,13 @@ export const favoriteStopsLabelLayer: LayerProps = {
 		"text-max-width": 15,
 	},
 	paint: {
-		"text-color": "#92400e",
-		"text-halo-color": "rgba(255,255,255,0.95)",
+		"text-color": theme === "dark" ? "#ffffff" : "#92400e",
+		"text-halo-color":
+			theme === "dark" ? "rgba(0,0,0,0.8)" : "rgba(255,255,255,0.95)",
 		"text-halo-width": 2,
 	},
 	minzoom: FAVORITE_LABEL_MINZOOM,
-};
+});
 
 // trunk line colors for turku region
 // screen color picked from some official pdf explainer Lol
@@ -298,22 +304,5 @@ export const routesOutlineLayer: LayerProps = {
 		"line-color": lineOutlineColorExpression,
 		"line-width": 8,
 		"line-opacity": 0.4,
-	},
-};
-
-export const routeArrowsLayer: LayerProps = {
-	id: "route-arrows",
-	type: "symbol",
-	layout: {
-		"symbol-placement": "line",
-		"symbol-spacing": 100,
-		"icon-image": "route-arrow",
-		"icon-size": 0.6,
-		"icon-rotation-alignment": "map",
-		"icon-allow-overlap": true,
-		"icon-ignore-placement": true,
-	},
-	paint: {
-		"icon-opacity": 0.9,
 	},
 };

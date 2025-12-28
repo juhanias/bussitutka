@@ -46,10 +46,10 @@ function FavoritesMenu({
 			<DialogContent className="gap-0 p-0 sm:max-w-md">
 				<DialogHeader className="border-b border-white/10 px-6 py-4">
 					<DialogTitle className="text-lg font-semibold text-white">
-						Favorite Stops
+						Suosikkipysäkit
 					</DialogTitle>
 					<DialogDescription className="text-white/60">
-						Manage your saved stops
+						Hallitse tallennettuja pysäkkejä
 					</DialogDescription>
 				</DialogHeader>
 
@@ -60,10 +60,10 @@ function FavoritesMenu({
 								<Star className="h-6 w-6 text-white/20" />
 							</div>
 							<p className="text-sm font-medium text-white/80">
-								No favorites yet
+								Ei vielä suosikkeja
 							</p>
 							<p className="mt-1 text-xs text-white/50">
-								Star stops to see them here
+								Merkkaa pysäkit tähdellä nähdäksesi ne täällä
 							</p>
 						</div>
 					) : (
@@ -93,7 +93,7 @@ function FavoritesMenu({
 											type="button"
 											onClick={() => onRemove(stop.stop_code)}
 											className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white/20 transition-colors hover:bg-red-500/20 hover:text-red-400 focus-visible:bg-red-500/20 focus-visible:text-red-400 focus-visible:outline-none"
-											aria-label={`remove ${stop.stop_name} from favorites`}
+											aria-label={`poista ${stop.stop_name} suosikeista`}
 										>
 											<Trash2 className="h-4 w-4" />
 										</button>
@@ -105,8 +105,11 @@ function FavoritesMenu({
 
 					{missingCount > 0 && (
 						<div className="m-2 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-center text-xs text-amber-200/80">
-							{missingCount} saved stop{missingCount === 1 ? "" : "s"} are no
-							longer in the current schedule data.
+							{missingCount}{" "}
+							{missingCount === 1
+								? "tallennettu pysäkki ei ole enää"
+								: "tallennettua pysäkkiä ei ole enää"}{" "}
+							nykyisessä aikataulutiedossa.
 						</div>
 					)}
 				</div>

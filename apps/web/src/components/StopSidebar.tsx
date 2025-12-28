@@ -300,7 +300,8 @@ function ScheduleList({
 										departures.length > 2
 											? Math.round(60 / departures.length)
 											: null;
-									const hourLabel = `${Number(hour).toString().padStart(2, "0")}:00`;
+									const hourNumber = Number(hour);
+									const hourLabel = `${hourNumber.toString().padStart(2, "0")}:00`;
 									const hourKey = `${day.date}-${hour}`;
 									const isHourCollapsed = collapsedHours.has(hourKey);
 
@@ -339,7 +340,6 @@ function ScheduleList({
 														const textColor = dep.routeColor
 															? `#${dep.routeColor}`
 															: getLineColor(dep.lineRef);
-
 														return (
 															<div
 																key={`${dep.tripId}-${dep.departureTime}`}
@@ -539,9 +539,7 @@ function StopSidebar({
 										</div>
 
 										<div className="flex items-center gap-2">
-											{!hasVehicle && (
-													<MissingVehicleHelp />
-											)}
+											{!hasVehicle && <MissingVehicleHelp />}
 
 											<div className="min-w-14 text-right">
 												<div
@@ -609,7 +607,7 @@ function StopSidebar({
 			<SidebarSheet
 				open={isOpen}
 				side="left"
-				className="h-full w-96 border-r border-border/10 bg-background/95 backdrop-blur-xl dark"
+				className="h-full w-96 border border-slate-700/50 bg-background/95 backdrop-blur-xl dark"
 			>
 				{Content}
 			</SidebarSheet>

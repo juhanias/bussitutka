@@ -85,6 +85,7 @@ export interface ScheduledDeparture {
 	destination: string;
 	departureTime: string; // HH:MM format for display
 	departureDate: Date;
+	serviceDayOffset: number; // 0 = same calendar day, 1 = next day, etc.
 	tripId: string;
 	routeColor?: string;
 	routeTextColor?: string;
