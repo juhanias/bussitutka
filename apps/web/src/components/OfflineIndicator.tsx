@@ -27,10 +27,12 @@ export function OfflineIndicator() {
 				<WifiOff className="w-16 h-16 text-destructive" />
 				<h1 className="text-2xl font-semibold">Et ole verkkoyhteydessä</h1>
 				<p className="text-muted-foreground max-w-sm">
-					Bussitutka tarvitsee internet-yhteyden näyttääksesi reaaliaikaiset bussien
-					sijainnit ja aikataulut.
+					Bussitutka tarvitsee internet-yhteyden näyttääksesi reaaliaikaiset
+					bussien sijainnit ja aikataulut.
 				</p>
-				<p className="text-muted-foreground/60 text-sm">Yhdistä uudelleen jatkaaksesi</p>
+				<p className="text-muted-foreground/60 text-sm">
+					Yhdistä uudelleen jatkaaksesi
+				</p>
 			</div>
 		</div>
 	);

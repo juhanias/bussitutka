@@ -11,7 +11,13 @@ type UiHintProps = {
 	children: ReactNode;
 };
 
-function UiHint({ id, condition = true, onView, className, children }: UiHintProps) {
+function UiHint({
+	id,
+	condition = true,
+	onView,
+	className,
+	children,
+}: UiHintProps) {
 	const dismissHint = useUiHintsStore((state) => state.dismissHint);
 	const isHintDismissed = useUiHintsStore((state) => state.isHintDismissed);
 	const shouldShow = condition && !isHintDismissed(id);

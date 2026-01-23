@@ -17,8 +17,8 @@ import {
 } from "@/app/appConstants";
 import { registerMapImages } from "@/app/map/registerMapImages";
 import {
-	busesOutlineLayer,
 	busesLayer,
+	busesOutlineLayer,
 	favoriteStopsCircleLayer,
 	favoriteStopsLabelLayer,
 	favoriteStopsShadowLayer,
@@ -92,7 +92,7 @@ export function MapView({
 				</Marker>
 			)}
 			<AttributionControl
-			style={{color: 'black'}}
+				style={{ color: "black" }}
 				customAttribution={
 					"bussit.juh.fi by Juhani Astikainen | Data from <a href='https://data.foli.fi' target='_blank' rel='noreferrer'>data.foli.fi</a></span>"
 				}

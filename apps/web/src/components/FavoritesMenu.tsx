@@ -1,5 +1,6 @@
-import { MapPin, Star, Trash2 } from "lucide-react";
+import { MapPin, RotateCcw, Star, Trash2 } from "lucide-react";
 import { useMemo } from "react";
+import { useCustomStopNamesStore } from "../store/customStopNames";
 import type { BusStop } from "../types/transport";
 import {
 	Dialog,
@@ -12,6 +13,7 @@ import {
 type FavoriteStopsMenuProps = {
 	isOpen: boolean;
 	favorites: BusStop[];
+	stops: BusStop[];
 	missingCount?: number;
 	onSelect: (stop: BusStop) => void;
 	onRemove: (stopCode: string) => void;
@@ -21,11 +23,17 @@ type FavoriteStopsMenuProps = {
 function FavoritesMenu({
 	isOpen,
 	favorites,
+	stops,
 	missingCount = 0,
 	onSelect,
 	onRemove,
 	onClose,
 }: FavoriteStopsMenuProps) {
+	const customNames = useCustomStopNamesStore((state) => state.customNames);
+	const resetCustomName = useCustomStopNamesStore(
+		(state) => state.resetCustomName,
+	);
+
 	const sortedFavorites = useMemo(
 		() =>
 			favorites.slice().sort((a, b) =>
@@ -34,6 +42,22 @@ function FavoritesMenu({
 				}),
 			),
 		[favorites],
+	);
+
+	const nicknameStops = useMemo(
+		() =>
+			stops
+				.filter((stop) => customNames.has(stop.stop_code))
+				.map((stop) => ({
+					stop,
+					customName: customNames.get(stop.stop_code) || stop.stop_name,
+				}))
+				.sort((a, b) =>
+					a.customName.localeCompare(b.customName, undefined, {
+						sensitivity: "base",
+					}),
+				),
+		[stops, customNames],
 	);
 
 	const handleSelect = (stop: BusStop) => {
@@ -110,6 +134,53 @@ function FavoritesMenu({
 								? "Tallennettu pysäkki ei ole enää"
 								: "Tallennettuja pysäkkejä ei ole enää"}{" "}
 							nykyisessä aikataulutiedossa.
+						</div>
+					)}
+
+					{nicknameStops.length > 0 && (
+						<div className="px-2 pb-2 pt-4">
+							<div className="space-y-1 px-2 pb-2">
+								<p className="text-xs font-semibold text-muted-foreground">
+									Lempinimen omaavat pysäkit
+								</p>
+								<p className="text-xs text-muted-foreground">
+									Pysäkit, joille olet antanut oman lempinimen
+								</p>
+							</div>
+							<ul className="space-y-0.5">
+								{nicknameStops.map(({ stop, customName }) => (
+									<li key={stop.stop_code}>
+										<div className="group flex items-center gap-2 rounded-lg p-2 transition-colors hover:bg-muted">
+											<button
+												type="button"
+												onClick={() => handleSelect(stop)}
+												className="flex flex-1 items-center gap-3 overflow-hidden text-left outline-none"
+											>
+												<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+													<MapPin className="h-4 w-4" />
+												</div>
+												<div className="min-w-0 flex-1">
+													<p className="truncate text-sm font-medium text-foreground">
+														{customName}
+													</p>
+													<p className="truncate text-xs text-muted-foreground">
+														{stop.stop_code}
+													</p>
+												</div>
+											</button>
+											<button
+												type="button"
+												onClick={() => resetCustomName(stop.stop_code)}
+												className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground/50 transition-colors hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground focus-visible:outline-none"
+												aria-label={`palauta lempinimi pysäkille ${stop.stop_name}`}
+												title="Palauta lempinimi"
+											>
+												<RotateCcw className="h-4 w-4" />
+											</button>
+										</div>
+									</li>
+								))}
+							</ul>
 						</div>
 					)}
 				</div>

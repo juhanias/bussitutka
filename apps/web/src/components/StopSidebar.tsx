@@ -7,18 +7,20 @@ import {
 import { getLineColor } from "../constants/layers";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 import { useStopSchedule } from "../hooks/useStopSchedule";
+import { useCustomStopNamesStore } from "../store/customStopNames";
 import { useFavoritesStore } from "../store/favorites";
+import { useUiHintsStore } from "../store/uiHints";
 import type { ScheduleDay, StopInfo } from "../types/transport";
 import { formatMinutesUntil, formatTime } from "../utils/time";
+import { EditStopNameDialog } from "./EditStopNameDialog";
 import UiHint from "./UiHint";
-import { useUiHintsStore } from "../store/uiHints";
 import {
 	Drawer,
 	DrawerClose,
 	DrawerContent,
 	DrawerDescription,
-	DrawerTrigger,
 	DrawerTitle,
+	DrawerTrigger,
 } from "./ui/drawer";
 import { SidebarSheet } from "./ui/sidebar-sheet";
 import {
@@ -388,7 +390,9 @@ function StopSidebar({
 	isVisible = true,
 }: StopSidebarProps) {
 	const [activeTab, setActiveTab] = useState<TabType>("realtime");
+	const [editDialogOpen, setEditDialogOpen] = useState(false);
 	const { favoriteStops, toggleFavorite } = useFavoritesStore();
+	const { getDisplayName } = useCustomStopNamesStore();
 	const dismissHint = useUiHintsStore((state) => state.dismissHint);
 	const isDesktop = useMediaQuery("(min-width: 768px)");
 
@@ -412,6 +416,7 @@ function StopSidebar({
 	if (!stop) return null;
 
 	const isFavorite = favoriteStops.has(stop.stop_code);
+	const displayName = getDisplayName(stop.stop_code, stop.stop_name);
 
 	const Content = (
 		<div className="flex h-full flex-col text-foreground">
@@ -420,9 +425,19 @@ function StopSidebar({
 					<div className="mb-1 text-xs font-medium tracking-wider text-muted-foreground">
 						Pysäkki {stop.stop_code}
 					</div>
-					<h2 className="truncate text-2xl font-bold leading-tight text-foreground">
-						{stop.stop_name}
-					</h2>
+					<div className="mb-1 flex items-center gap-2">
+						<h2 className="truncate text-2xl font-bold leading-tight text-foreground">
+							{displayName}
+						</h2>
+						<button
+							type="button"
+							onClick={() => setEditDialogOpen(true)}
+							className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground/40 transition-colors hover:bg-muted hover:text-foreground"
+							title="Muokkaa pysäkin lempinimeä"
+						>
+							✎
+						</button>
+					</div>
 				</div>
 				<div className="flex shrink-0 items-center gap-2">
 					<button
@@ -614,26 +629,46 @@ function StopSidebar({
 
 	if (isDesktop) {
 		return (
-			<SidebarSheet
-				open={isOpen}
-				side="left"
-				className="h-full w-96 border border-border bg-[var(--stop-panel-background)] backdrop-blur-xl"
-			>
-				{Content}
-			</SidebarSheet>
+			<>
+				<SidebarSheet
+					open={isOpen}
+					side="left"
+					className="h-full w-96 border border-border bg-[var(--stop-panel-background)] backdrop-blur-xl"
+				>
+					{Content}
+				</SidebarSheet>
+				{stop && (
+					<EditStopNameDialog
+						open={editDialogOpen}
+						onOpenChange={setEditDialogOpen}
+						stopCode={stop.stop_code}
+						originalName={stop.stop_name}
+					/>
+				)}
+			</>
 		);
 	}
 
 	return (
-		<Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
-			<DrawerContent className="h-[85vh] bg-[var(--stop-panel-background)]">
-				<DrawerTitle className="sr-only">{stop.stop_name}</DrawerTitle>
-				<DrawerDescription className="sr-only">
-					Pysäkin tiedot
-				</DrawerDescription>
-				<div className="mx-auto h-full w-full max-w-md">{Content}</div>
-			</DrawerContent>
-		</Drawer>
+		<>
+			<Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
+				<DrawerContent className="h-[85vh] bg-[var(--stop-panel-background)]">
+					<DrawerTitle className="sr-only">{stop.stop_name}</DrawerTitle>
+					<DrawerDescription className="sr-only">
+						Pysäkin tiedot
+					</DrawerDescription>
+					<div className="mx-auto h-full w-full max-w-md">{Content}</div>
+				</DrawerContent>
+			</Drawer>
+			{stop && (
+				<EditStopNameDialog
+					open={editDialogOpen}
+					onOpenChange={setEditDialogOpen}
+					stopCode={stop.stop_code}
+					originalName={stop.stop_name}
+				/>
+			)}
+		</>
 	);
 }
 

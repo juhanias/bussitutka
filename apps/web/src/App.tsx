@@ -38,6 +38,7 @@ import { useAnimatedVehicles } from "./hooks/useAnimatedVehicles";
 import { useMediaQuery } from "./hooks/useMediaQuery";
 import { usePWAInstall } from "./hooks/usePWAInstall";
 import { useRouteShapes } from "./hooks/useRouteShapes";
+import { useCustomStopNamesStore } from "./store/customStopNames";
 import { useFavoritesStore } from "./store/favorites";
 import type { BusStop, StopInfo } from "./types/transport";
 
@@ -50,6 +51,7 @@ function App() {
 	const isOnline = useOnlineStatus();
 	const { canInstall, install } = usePWAInstall();
 	const { stops } = useStops();
+	const { getDisplayName } = useCustomStopNamesStore();
 	const [stopInfo, setStopInfo] = useState<StopInfo>({
 		stop: null,
 		departures: [],
@@ -131,8 +133,7 @@ function App() {
 				return;
 			}
 			const elapsedSeconds = (timestamp - orbitStartRef.current) / 1000;
-			const bearing =
-				(elapsedSeconds * ORBIT_ROTATION_DEG_PER_SEC) % 360;
+			const bearing = (elapsedSeconds * ORBIT_ROTATION_DEG_PER_SEC) % 360;
 			const { lng, lat } = orbitTargetRef.current;
 			mapRef.jumpTo({
 				center: [lng, lat],
@@ -280,7 +281,7 @@ function App() {
 					type: "Feature",
 					properties: {
 						stop_code: stop.stop_code,
-						stop_name: stop.stop_name,
+						stop_name: getDisplayName(stop.stop_code, stop.stop_name),
 					},
 					geometry: {
 						type: "Point",
@@ -288,7 +289,7 @@ function App() {
 					},
 				})),
 		}),
-		[stops, favoriteStops],
+		[stops, favoriteStops, getDisplayName],
 	);
 
 	const favoriteStopsGeojson = useMemo<FeatureCollection<Point>>(
@@ -300,7 +301,7 @@ function App() {
 					type: "Feature",
 					properties: {
 						stop_code: stop.stop_code,
-						stop_name: stop.stop_name,
+						stop_name: getDisplayName(stop.stop_code, stop.stop_name),
 					},
 					geometry: {
 						type: "Point",
@@ -308,7 +309,7 @@ function App() {
 					},
 				})),
 		}),
-		[stops, favoriteStops],
+		[stops, favoriteStops, getDisplayName],
 	);
 
 	const busesGeojson = useMemo<FeatureCollection<Point>>(() => {
@@ -458,9 +459,7 @@ function App() {
 							type="button"
 							onClick={() => setIsOrbitToolEnabled((prev) => !prev)}
 							className={`pointer-events-auto flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-card/90 text-foreground backdrop-blur-sm transition-colors hover:border-primary/30 hover:bg-card sm:w-auto sm:px-4 ${
-								isOrbitToolEnabled
-									? "border-primary/40 text-primary"
-									: ""
+								isOrbitToolEnabled ? "border-primary/40 text-primary" : ""
 							}`}
 							aria-pressed={isOrbitToolEnabled}
 							aria-label="Cinematic orbit"
@@ -535,6 +534,7 @@ function App() {
 				<FavoritesMenu
 					isOpen={isFavoritesOpen}
 					favorites={favoriteStopsList}
+					stops={stops}
 					missingCount={favoriteStops.size - favoriteStopsList.length}
 					onSelect={handleStopSelect}
 					onRemove={toggleFavorite}
