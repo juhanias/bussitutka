@@ -18,6 +18,14 @@ export type TripRow = {
 	service_id: string;
 	trip_headsign?: string;
 	direction_id?: string;
+	shape_id?: string;
+};
+
+export type ShapePoint = {
+	shape_id: string;
+	shape_pt_lat: number;
+	shape_pt_lon: number;
+	shape_pt_sequence: number;
 };
 
 export type StopTimeRow = {
@@ -52,6 +60,7 @@ export type GtfsData = {
 	datasetId: string;
 	routes: Map<string, RouteRow>;
 	trips: Map<string, TripRow>;
+	shapes: Map<string, ShapePoint[]>;
 	stopsByCode: Map<string, StopRow>;
 	stopTimesByStopId: Map<string, StopTimeRow[]>;
 	calendar: Map<string, CalendarRow>;

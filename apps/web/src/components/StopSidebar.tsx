@@ -10,6 +10,8 @@ import { useStopSchedule } from "../hooks/useStopSchedule";
 import { useFavoritesStore } from "../store/favorites";
 import type { ScheduleDay, StopInfo } from "../types/transport";
 import { formatMinutesUntil, formatTime } from "../utils/time";
+import UiHint from "./UiHint";
+import { useUiHintsStore } from "../store/uiHints";
 import {
 	Drawer,
 	DrawerClose,
@@ -91,9 +93,9 @@ function MissingVehicleHelp() {
 					<DrawerClose asChild>
 						<button
 							type="button"
-							className="w-full rounded-xl bg-muted px-3 py-2 text-sm text-foreground/80"
+							className="w-full rounded-lg bg-muted px-3 py-2.5 text-sm font-medium text-foreground/80 transition-colors hover:bg-muted/80"
 						>
-							sulje
+							Asia selvä
 						</button>
 					</DrawerClose>
 				</div>
@@ -209,9 +211,9 @@ function ScheduleList({
 	return (
 		<div className="space-y-5">
 			{lines.length > 0 && (
-				<div className="space-y-2 rounded-xl border border-muted/60 bg-muted/30 px-3 py-2 text-sm">
+				<div className="space-y-2 rounded-lg border border-border bg-card px-3 py-2.5 text-sm">
 					<div className="flex items-center justify-between text-xs uppercase tracking-wide text-muted-foreground">
-						<span>linjat</span>
+						<span>Linjat</span>
 						<span className="text-[11px] font-semibold text-foreground/70">
 							{lineFilter.size || lines.length}/{lines.length}
 						</span>
@@ -267,7 +269,7 @@ function ScheduleList({
 				return (
 					<div
 						key={day.date}
-						className="overflow-hidden rounded-xl border border-muted/60 bg-muted/20 shadow-sm"
+						className="overflow-hidden rounded-lg border border-border bg-card"
 					>
 						<button
 							type="button"
@@ -290,7 +292,7 @@ function ScheduleList({
 						{isExpanded && (
 							<div className="space-y-3 px-4 pb-4">
 								{hours.length === 0 && (
-									<div className="rounded-lg border border-dashed border-muted/50 bg-background/40 px-3 py-2 text-sm text-muted-foreground">
+									<div className="rounded-lg border border-dashed border-border bg-background/40 px-3 py-2 text-sm text-muted-foreground">
 										Ei lähtöjä
 									</div>
 								)}
@@ -308,7 +310,7 @@ function ScheduleList({
 									return (
 										<div
 											key={`${day.date}-${hour}`}
-											className="rounded-lg border border-muted/50 bg-background/60 px-3 py-2"
+											className="rounded-lg border border-border bg-background/60 px-3 py-2.5"
 										>
 											<button
 												type="button"
@@ -387,6 +389,7 @@ function StopSidebar({
 }: StopSidebarProps) {
 	const [activeTab, setActiveTab] = useState<TabType>("realtime");
 	const { favoriteStops, toggleFavorite } = useFavoritesStore();
+	const dismissHint = useUiHintsStore((state) => state.dismissHint);
 	const isDesktop = useMediaQuery("(min-width: 768px)");
 
 	const [lastStop, setLastStop] = useState(stopInfo.stop);
@@ -414,8 +417,8 @@ function StopSidebar({
 		<div className="flex h-full flex-col text-foreground">
 			<div className="flex items-start justify-between gap-4 px-5 pt-6 pb-2">
 				<div className="min-w-0 flex-1 text-left">
-					<div className="mb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-						pysäkki {stop.stop_code}
+					<div className="mb-1 text-xs font-medium tracking-wider text-muted-foreground">
+						Pysäkki {stop.stop_code}
 					</div>
 					<h2 className="truncate text-2xl font-bold leading-tight text-foreground">
 						{stop.stop_name}
@@ -425,11 +428,7 @@ function StopSidebar({
 					<button
 						type="button"
 						onClick={() => toggleFavorite(stop.stop_code)}
-						className={`flex h-9 w-9 items-center justify-center rounded-full transition-colors ${
-							isFavorite
-								? "bg-amber-400/10 text-amber-300"
-								: "text-muted-foreground/40 hover:bg-muted/10 hover:text-foreground"
-						}`}
+						className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground/40 transition-colors hover:bg-muted hover:text-foreground"
 						title={isFavorite ? "Poista suosikeista" : "Lisää suosikiksi"}
 					>
 						{isFavorite ? "★" : "☆"}
@@ -438,7 +437,7 @@ function StopSidebar({
 						<button
 							type="button"
 							onClick={onClose}
-							className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground/40 transition-colors hover:bg-muted/10 hover:text-foreground"
+							className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground/40 transition-colors hover:bg-muted hover:text-foreground"
 						>
 							✕
 						</button>
@@ -446,7 +445,7 @@ function StopSidebar({
 						<DrawerClose asChild>
 							<button
 								type="button"
-								className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground/40 transition-colors hover:bg-muted/10 hover:text-foreground"
+								className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground/40 transition-colors hover:bg-muted hover:text-foreground"
 							>
 								✕
 							</button>
@@ -456,24 +455,24 @@ function StopSidebar({
 			</div>
 
 			<div className="px-5 pb-3">
-				<div className="flex rounded-xl bg-muted/50 p-1">
+				<div className="flex rounded-lg bg-muted p-1">
 					<button
 						type="button"
 						onClick={() => setActiveTab("realtime")}
-						className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+						className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-all ${
 							activeTab === "realtime"
-								? "bg-background text-foreground shadow-sm"
+								? "bg-primary text-primary-foreground shadow-sm"
 								: "text-muted-foreground hover:text-foreground"
 						}`}
 					>
-						Reaaliaikainen
+						Juuri nyt
 					</button>
 					<button
 						type="button"
 						onClick={() => setActiveTab("schedule")}
-						className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+						className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-all ${
 							activeTab === "schedule"
-								? "bg-background text-foreground shadow-sm"
+								? "bg-primary text-primary-foreground shadow-sm"
 								: "text-muted-foreground hover:text-foreground"
 						}`}
 					>
@@ -481,6 +480,14 @@ function StopSidebar({
 					</button>
 				</div>
 			</div>
+
+			<UiHint
+				id="busstop.mapview.hint"
+				condition={activeTab === "realtime" && stopInfo.departures.length > 0}
+				className="px-5 pb-2 text-center text-xs italic text-muted-foreground/80"
+			>
+				↓ Napauta linjaa nähdäksesi sen kartalla! ↓
+			</UiHint>
 
 			<div className="flex-1 overflow-y-auto px-5 pb-6 scrollbar-thin">
 				{activeTab === "realtime" ? (
@@ -500,11 +507,11 @@ function StopSidebar({
 								const isTracked = trackedVehicleRef === dep.vehicleref;
 								const hasVehicle = Boolean(dep.vehicleref);
 								const baseClass =
-									"group flex w-full items-center gap-4 rounded-2xl p-3 text-left transition-all";
+									"group flex w-full items-center gap-4 rounded-lg p-3 text-left transition-all";
 								const variantClass = isTracked
-									? "bg-blue-500/20 ring-1 ring-blue-500/50"
+									? "bg-primary/15 ring-1 ring-primary/40"
 									: hasVehicle
-										? "cursor-pointer hover:bg-muted/50"
+										? "cursor-pointer hover:bg-muted"
 										: "opacity-50";
 								const arrivalLabel = dep.vehicleatstop
 									? "Nyt"
@@ -513,7 +520,7 @@ function StopSidebar({
 								const content = (
 									<>
 										<div
-											className={`w-10 text-center text-xl font-bold ${isTracked ? "text-blue-400" : "text-foreground"}`}
+											className={`w-10 text-center text-xl font-bold ${isTracked ? "text-primary" : "text-foreground"}`}
 										>
 											{dep.lineref}
 										</div>
@@ -528,11 +535,11 @@ function StopSidebar({
 													<span
 														className={`transition-colors ${
 															isTracked
-																? "text-blue-400"
+																? "text-primary"
 																: "group-hover:text-foreground/60"
 														}`}
 													>
-														• {isTracked ? "Seurataan" : "Kartalla"}
+														• {isTracked ? "seurataan" : "kartalla"}
 													</span>
 												)}
 											</div>
@@ -547,7 +554,7 @@ function StopSidebar({
 														dep.vehicleatstop
 															? "text-emerald-400"
 															: isTracked
-																? "text-blue-400"
+																? "text-primary"
 																: "text-foreground"
 													}`}
 												>
@@ -572,7 +579,10 @@ function StopSidebar({
 											onKeyDown={(e: ReactKeyboardEvent<HTMLButtonElement>) => {
 												if (e.key === " ") e.preventDefault();
 											}}
-											onClick={() => onBusClick(dep.vehicleref)}
+											onClick={() => {
+												dismissHint("busstop.mapview.hint");
+												onBusClick(dep.vehicleref);
+											}}
 										>
 											{content}
 										</button>
@@ -607,7 +617,7 @@ function StopSidebar({
 			<SidebarSheet
 				open={isOpen}
 				side="left"
-				className="h-full w-96 border border-slate-700/50 bg-background/95 backdrop-blur-xl dark"
+				className="h-full w-96 border border-border bg-[var(--stop-panel-background)] backdrop-blur-xl"
 			>
 				{Content}
 			</SidebarSheet>
@@ -616,7 +626,7 @@ function StopSidebar({
 
 	return (
 		<Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
-			<DrawerContent className="h-[85vh] dark">
+			<DrawerContent className="h-[85vh] bg-[var(--stop-panel-background)]">
 				<DrawerTitle className="sr-only">{stop.stop_name}</DrawerTitle>
 				<DrawerDescription className="sr-only">
 					Pysäkin tiedot

@@ -22,15 +22,15 @@ export function useOnlineStatus() {
 
 export function OfflineIndicator() {
 	return (
-		<div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1a1a2e]">
-			<div className="flex flex-col items-center gap-4 text-white/80 text-center px-8">
-				<WifiOff className="w-16 h-16 text-red-400" />
-				<h1 className="text-2xl font-semibold">you're offline</h1>
-				<p className="text-white/60 max-w-sm">
-					bussitutka needs an internet connection to show real-time bus
-					locations and schedules.
+		<div className="fixed inset-0 z-50 flex items-center justify-center bg-background">
+			<div className="flex flex-col items-center gap-4 text-foreground/80 text-center px-8">
+				<WifiOff className="w-16 h-16 text-destructive" />
+				<h1 className="text-2xl font-semibold">Et ole verkkoyhteydessä</h1>
+				<p className="text-muted-foreground max-w-sm">
+					Bussitutka tarvitsee internet-yhteyden näyttääksesi reaaliaikaiset bussien
+					sijainnit ja aikataulut.
 				</p>
-				<p className="text-white/40 text-sm">reconnect to continue</p>
+				<p className="text-muted-foreground/60 text-sm">Yhdistä uudelleen jatkaaksesi</p>
 			</div>
 		</div>
 	);

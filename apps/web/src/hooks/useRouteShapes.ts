@@ -1,12 +1,22 @@
 import { useCallback, useRef, useState } from "react";
 
-import { GTFS_BASE } from "../constants/endpoints";
-import type { Departure, ShapePoint, Trip } from "../types/transport";
+import { GTFS_SHAPES_ENDPOINT } from "../constants/endpoints";
+import type { Departure } from "../types/transport";
 
 export interface RouteShape {
 	coords: [number, number][];
 	lineref: string;
 }
+
+type TripShapesResponse = {
+	status: "ok" | "error";
+	shapes?: {
+		tripId: string;
+		shapeId: string;
+		coords: [number, number][];
+	}[];
+	message?: string;
+};
 
 export function useRouteShapes() {
 	const [routeShapes, setRouteShapes] = useState<RouteShape[]>([]);
@@ -35,60 +45,36 @@ export function useRouteShapes() {
 		}
 
 		try {
-			// map shapeId to lineref
-			const shapeToLineref = new Map<string, string>();
-			await Promise.all(
-				[...uniqueTrips.values()].map(async ({ tripRef, lineref }) => {
-					try {
-						const tripRes = await fetch(
-							`${GTFS_BASE}/trips/trip/${encodeURIComponent(tripRef)}`,
-						);
-						const trips: Trip[] = await tripRes.json();
-						if (trips.length > 0 && trips[0].shape_id) {
-							shapeToLineref.set(trips[0].shape_id, lineref);
-						}
-					} catch (err) {
-						console.error("Failed to fetch trip data", err);
-					}
-				}),
-			);
+			const tripIdToLineRef = new Map<string, string>();
+			for (const { tripRef, lineref } of uniqueTrips.values()) {
+				tripIdToLineRef.set(tripRef, lineref);
+			}
 
-			if (!shapeToLineref.size) {
+			const tripIds = Array.from(tripIdToLineRef.keys());
+			const response = await fetch(GTFS_SHAPES_ENDPOINT, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ tripIds }),
+			});
+			if (!response.ok) {
+				throw new Error(`gtfs shapes responded with ${response.status}`);
+			}
+			const payload = (await response.json()) as TripShapesResponse;
+			if (payload.status !== "ok" || !payload.shapes?.length) {
 				setRouteShapes([]);
 				return;
 			}
 
 			const shapes: RouteShape[] = [];
-			await Promise.all(
-				[...shapeToLineref.entries()].map(async ([shapeId, lineref]) => {
-					if (shapeCacheRef.current.has(shapeId)) {
-						const coords = shapeCacheRef.current.get(shapeId);
-						if (coords) {
-							shapes.push({
-								coords,
-								lineref,
-							});
-						}
-						return;
-					}
-
-					try {
-						const shapeRes = await fetch(`${GTFS_BASE}/shapes/${shapeId}`);
-						const shapePoints: ShapePoint[] = await shapeRes.json();
-						const coords: [number, number][] = shapePoints.map((p) => [
-							p.lon,
-							p.lat,
-						]);
-						shapeCacheRef.current.set(shapeId, coords);
-						shapes.push({
-							coords,
-							lineref,
-						});
-					} catch (err) {
-						console.error("Failed to fetch shape data", err);
-					}
-				}),
-			);
+			for (const shape of payload.shapes) {
+				const lineref = tripIdToLineRef.get(shape.tripId);
+				if (!lineref) continue;
+				const cached = shapeCacheRef.current.get(shape.shapeId);
+				const coords = cached ?? shape.coords;
+				if (!coords?.length) continue;
+				shapeCacheRef.current.set(shape.shapeId, coords);
+				shapes.push({ coords, lineref });
+			}
 
 			setRouteShapes(shapes);
 		} catch (err) {

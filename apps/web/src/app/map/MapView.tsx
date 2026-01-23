@@ -91,7 +91,12 @@ export function MapView({
 					/>
 				</Marker>
 			)}
-			<AttributionControl customAttribution="bussit.juh.fi by Juhani Astikainen | Data from https://data.foli.fi" />
+			<AttributionControl
+			style={{color: 'black'}}
+				customAttribution={
+					"bussit.juh.fi by Juhani Astikainen | Data from <a href='https://data.foli.fi' target='_blank' rel='noreferrer'>data.foli.fi</a></span>"
+				}
+			/>
 			<Source id="routes" type="geojson" data={routesGeojson}>
 				<Layer {...routesOutlineLayer} />
 				<Layer {...routesLayer} />

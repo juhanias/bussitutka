@@ -8,6 +8,7 @@ import type {
 	CalendarRow,
 	GtfsData,
 	RouteRow,
+	ShapePoint,
 	StopRow,
 	StopTimeRow,
 	TripRow,
@@ -17,6 +18,7 @@ const REQUIRED_FILES = [
 	"stops.txt",
 	"routes.txt",
 	"trips.txt",
+	"shapes.txt",
 	"stop_times.txt",
 	"calendar.txt",
 	"calendar_dates.txt",
@@ -124,6 +126,42 @@ async function loadTrips(filePath: string): Promise<Map<string, TripRow>> {
 	return map;
 }
 
+async function loadShapes(filePath: string): Promise<Map<string, ShapePoint[]>> {
+	const text = await Bun.file(filePath).text();
+	const [headerLine, ...lines] = text.split(/\r?\n/).filter(Boolean);
+	const headers = parseCsvLine(headerLine);
+	const idx = {
+		shape: headers.indexOf("shape_id"),
+		lat: headers.indexOf("shape_pt_lat"),
+		lon: headers.indexOf("shape_pt_lon"),
+		seq: headers.indexOf("shape_pt_sequence"),
+	};
+
+	const map = new Map<string, ShapePoint[]>();
+
+	for (const line of lines) {
+		const cols = parseCsvLine(line);
+		const shapeId = cols[idx.shape];
+		if (!shapeId) continue;
+		const point: ShapePoint = {
+			shape_id: shapeId,
+			shape_pt_lat: Number.parseFloat(cols[idx.lat] ?? "0"),
+			shape_pt_lon: Number.parseFloat(cols[idx.lon] ?? "0"),
+			shape_pt_sequence: toInt(cols[idx.seq] ?? "0") || 0,
+		};
+
+		const list = map.get(shapeId) ?? [];
+		list.push(point);
+		if (!map.has(shapeId)) map.set(shapeId, list);
+	}
+
+	for (const list of map.values()) {
+		list.sort((a, b) => a.shape_pt_sequence - b.shape_pt_sequence);
+	}
+
+	return map;
+}
+
 async function loadStopTimes(
 	filePath: string,
 ): Promise<Map<string, StopTimeRow[]>> {
@@ -206,6 +244,7 @@ async function loadDatasetFromPath(datasetPath: string, datasetId: string): Prom
 		datasetId,
 		routes: await loadRoutes(join(datasetPath, "routes.txt")),
 		trips: await loadTrips(join(datasetPath, "trips.txt")),
+		shapes: await loadShapes(join(datasetPath, "shapes.txt")),
 		stopsByCode: await loadStops(join(datasetPath, "stops.txt")),
 		stopTimesByStopId: await loadStopTimes(join(datasetPath, "stop_times.txt")),
 		calendar: await loadCalendar(join(datasetPath, "calendar.txt")),

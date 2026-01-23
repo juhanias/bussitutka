@@ -10,6 +10,9 @@ const SIRI_VM_URL = process.env.SIRI_VM_URL ?? "https://data.foli.fi/siri/vm";
 const POLL_INTERVAL_MS = Number(process.env.SIRI_POLL_INTERVAL_MS ?? 4000);
 const STALE_AFTER_MS = Number(process.env.SIRI_STALE_AFTER_MS ?? 20000);
 const MAX_IDS_PER_REQUEST = Number(process.env.SIRI_MAX_IDS_PER_REQUEST ?? 200);
+const MAX_GTFS_TRIPS_PER_REQUEST = Number(
+	process.env.GTFS_TRIPS_MAX_IDS ?? 60,
+);
 const GTFS_REFRESH_INTERVAL_MS = Number(
 	process.env.GTFS_REFRESH_INTERVAL_MS ?? 6 * 60 * 60 * 1000,
 );
@@ -42,6 +45,13 @@ type VehicleSnapshot = {
 };
 
 type IdInput = { ids?: string | string[] } | undefined;
+type TripIdsInput = { tripIds?: string | string[] } | undefined;
+
+type TripShape = {
+	tripId: string;
+	shapeId: string;
+	coords: [number, number][];
+};
 
 const vehicleCache = new Map<string, VehicleSnapshot>();
 let lastUpdated: number | null = null;
@@ -70,6 +80,18 @@ const normalizeIds = (input: IdInput): string[] => {
 
 	// dedupe to keep payloads smaller
 	return Array.from(new Set(ids)).slice(0, MAX_IDS_PER_REQUEST);
+};
+
+const normalizeTripIds = (input: TripIdsInput): string[] => {
+	const raw = input?.tripIds;
+
+	if (!raw) return [];
+
+	const ids = Array.isArray(raw)
+		? raw.map((id) => id.trim()).filter(Boolean)
+		: parseIdsFromString(raw);
+
+	return Array.from(new Set(ids)).slice(0, MAX_GTFS_TRIPS_PER_REQUEST);
 };
 
 const normalizeVehicle = (raw: SiriVehicle): VehicleSnapshot | null => {
@@ -156,6 +178,44 @@ const buildVehicleResponse = (
 	};
 };
 
+const buildTripShapesResponse = (
+	tripIds: string[],
+	set: { status: number; headers: Record<string, string> },
+) => {
+	if (!tripIds.length) {
+		set.status = 400;
+		return { status: "error", message: "tripIds required" };
+	}
+
+	if (!gtfsData) {
+		set.status = 503;
+		return { status: "error", message: "gtfs dataset not ready" };
+	}
+
+	const shapes: TripShape[] = [];
+
+	for (const tripId of tripIds) {
+		const trip = gtfsData.trips.get(tripId);
+		const shapeId = trip?.shape_id;
+		if (!shapeId) continue;
+		const points = gtfsData.shapes.get(shapeId);
+		if (!points?.length) continue;
+		const coords: [number, number][] = points.map((point) => [
+			point.shape_pt_lon,
+			point.shape_pt_lat,
+		]);
+		shapes.push({ tripId, shapeId, coords });
+	}
+
+	set.headers["Cache-Control"] = "no-store";
+	return {
+		status: "ok",
+		shapes,
+		datasetId: gtfsData.datasetId,
+		generatedAt: Date.now(),
+	};
+};
+
 const refreshGtfs = async () => {
 	if (gtfsLoadingPromise) return gtfsLoadingPromise;
 	gtfsLoadingPromise = (async () => {
@@ -228,6 +288,10 @@ const app = new Elysia()
 		gtfsLastRefresh,
 		gtfsLoadedFrom,
 	}))
+	.post("/api/gtfs/shapes", ({ body, set }) => {
+		const tripIds = normalizeTripIds(body as TripIdsInput);
+		return buildTripShapesResponse(tripIds, set);
+	})
 	.post("/api/schedule/stop", ({ body, set }) => {
 		const { stopCode, limit, now, days, maxPerDay } = body as {
 			stopCode?: string;

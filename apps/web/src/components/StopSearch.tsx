@@ -88,44 +88,44 @@ function StopSearch({ isOpen, stops, onSelect, onClose }: StopSearchProps) {
 	return (
 		<Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
 			<DialogContent showCloseButton={false} className="gap-0 p-0 sm:max-w-xl">
-				<div className="flex items-center border-b border-white/10 px-4 py-3">
-					<Search className="mr-3 h-5 w-5 text-white/50" />
+				<div className="flex items-center border-b border-border px-4 py-3">
+					<Search className="mr-3 h-5 w-5 text-muted-foreground" />
 					<input
 						ref={inputRef}
 						value={query}
 						onChange={(event) => setQuery(event.target.value)}
 						onKeyDown={handleInputKeyDown}
-						className="flex-1 bg-transparent text-base text-white outline-none placeholder:text-white/50"
-						placeholder="Search stops by name or ID..."
+						className="flex-1 bg-transparent text-base text-foreground outline-none placeholder:text-muted-foreground"
+						placeholder="search stops..."
 						aria-label="Search stops"
 					/>
-					<div className="ml-2 hidden rounded border border-white/10 bg-white/5 px-1.5 py-0.5 text-xs font-medium text-white/50 sm:block">
+					<div className="ml-2 hidden rounded border border-border bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground sm:block">
 						ESC
 					</div>
 				</div>
 
 				<div className="max-h-[60vh] overflow-y-auto p-2">
 					{filteredStops.length === 0 ? (
-						<div className="py-12 text-center text-sm text-white/50">
-							No stops found.
+						<div className="py-12 text-center text-sm text-muted-foreground">
+							Ei tuloksia
 						</div>
 					) : (
-						<ul className="space-y-1">
+						<ul className="space-y-0.5">
 							{filteredStops.map((stop, index) => (
 								<li key={stop.stop_code}>
 									<button
 										type="button"
 										onClick={() => handleSelect(stop)}
-										className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left transition-colors ${
+										className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left transition-colors ${
 											index === activeIndex
-												? "bg-white/10 text-white"
-												: "text-white/70 hover:bg-white/5 hover:text-white"
+												? "bg-primary/15 text-primary"
+												: "text-foreground/80 hover:bg-muted hover:text-foreground"
 										}`}
 									>
 										<span className="truncate font-medium">
 											{stop.stop_name}
 										</span>
-										<span className="ml-2 shrink-0 font-mono text-xs text-white/40">
+										<span className="ml-2 shrink-0 font-mono text-xs text-muted-foreground">
 											{stop.stop_code}
 										</span>
 									</button>
