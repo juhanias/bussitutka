@@ -8,7 +8,10 @@ export interface BusStop {
 export interface Departure {
 	lineref: string;
 	destinationdisplay: string;
+	aimedarrivaltime: number;
 	expectedarrivaltime: number;
+	aimeddeparturetime: number;
+	expecteddeparturetime: number;
 	vehicleatstop: boolean;
 	monitored: boolean;
 	vehicleref: string;

@@ -10,7 +10,7 @@ import { useStopSchedule } from "../hooks/useStopSchedule";
 import { useCustomStopNamesStore } from "../store/customStopNames";
 import { useFavoritesStore } from "../store/favorites";
 import { useUiHintsStore } from "../store/uiHints";
-import type { ScheduleDay, StopInfo } from "../types/transport";
+import type { Departure, ScheduleDay, StopInfo } from "../types/transport";
 import { formatMinutesUntil, formatTime } from "../utils/time";
 import { EditStopNameDialog } from "./EditStopNameDialog";
 import UiHint from "./UiHint";
@@ -48,6 +48,49 @@ const MISSING_VEHICLE_BODY = {
 		"Tämä verkkopalvelu käyttää Fölin dataa suoraan, joten emme voi näyttää tämän bussin sijaintia.",
 	],
 } as const;
+
+const ARRIVAL_VARIANCE_THRESHOLD_SECONDS = 60;
+
+function getArrivalDisplay(dep: Departure) {
+	const scheduledTime =
+		dep.aimeddeparturetime ??
+		dep.expecteddeparturetime ??
+		dep.aimedarrivaltime ??
+		dep.expectedarrivaltime;
+	const estimateTime =
+		dep.expecteddeparturetime ??
+		dep.aimeddeparturetime ??
+		dep.expectedarrivaltime;
+	const deltaSeconds = estimateTime - scheduledTime;
+	const isShifted =
+		Math.abs(deltaSeconds) >= ARRIVAL_VARIANCE_THRESHOLD_SECONDS;
+	const isLate = deltaSeconds > 0;
+	const isEarly = deltaSeconds < 0;
+
+	if (dep.vehicleatstop) {
+		return {
+			scheduledClock: formatTime(scheduledTime),
+			estimateClock: formatTime(estimateTime),
+			scheduledLabel: formatMinutesUntil(scheduledTime),
+			estimateLabel: "Nyt",
+			isShifted,
+			actualTextClass: "text-emerald-200",
+		};
+	}
+
+	return {
+		scheduledClock: formatTime(scheduledTime),
+		estimateClock: formatTime(estimateTime),
+		scheduledLabel: formatMinutesUntil(scheduledTime),
+		estimateLabel: formatMinutesUntil(estimateTime),
+		isShifted,
+		actualTextClass: isLate
+			? "text-rose-200"
+			: isEarly
+				? "text-amber-200"
+				: "text-foreground",
+	};
+}
 
 function MissingVehicleHelp() {
 	const canHover = useMediaQuery("(hover: hover) and (pointer: fine)");
@@ -521,6 +564,7 @@ function StopSidebar({
 							{stopInfo.departures.map((dep, i) => {
 								const isTracked = trackedVehicleRef === dep.vehicleref;
 								const hasVehicle = Boolean(dep.vehicleref);
+								const arrivalDisplay = getArrivalDisplay(dep);
 								const baseClass =
 									"group flex w-full items-center gap-4 rounded-lg p-3 text-left transition-all";
 								const variantClass = isTracked
@@ -528,9 +572,6 @@ function StopSidebar({
 									: hasVehicle
 										? "cursor-pointer hover:bg-muted"
 										: "opacity-50";
-								const arrivalLabel = dep.vehicleatstop
-									? "Nyt"
-									: formatMinutesUntil(dep.expectedarrivaltime);
 
 								const content = (
 									<>
@@ -544,8 +585,23 @@ function StopSidebar({
 											<div className="truncate text-base font-medium text-foreground/90">
 												{dep.destinationdisplay}
 											</div>
-											<div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
-												<span>{formatTime(dep.expectedarrivaltime)}</span>
+											<div className="mt-0.5 flex items-center gap-2 text-sm text-muted-foreground">
+												{arrivalDisplay.isShifted ? (
+													<>
+														<span className="line-through text-foreground/55">
+															{arrivalDisplay.scheduledClock}
+														</span>
+														<span
+															className={`font-medium ${arrivalDisplay.actualTextClass}`}
+														>
+															{arrivalDisplay.estimateClock}
+														</span>
+													</>
+												) : (
+													<span className="font-medium text-foreground/80">
+														{arrivalDisplay.estimateClock}
+													</span>
+												)}
 												{hasVehicle && (
 													<span
 														className={`transition-colors ${
@@ -564,17 +620,30 @@ function StopSidebar({
 											{!hasVehicle && <MissingVehicleHelp />}
 
 											<div className="min-w-14 text-right">
-												<div
-													className={`text-lg font-bold ${
-														dep.vehicleatstop
-															? "text-emerald-400"
-															: isTracked
-																? "text-primary"
-																: "text-foreground"
-													}`}
-												>
-													{arrivalLabel}
-												</div>
+												{arrivalDisplay.isShifted ? (
+													<div className="flex items-center justify-end gap-2">
+														<span className="text-lg font-medium text-foreground/55 line-through">
+															{arrivalDisplay.scheduledLabel}
+														</span>
+														<span
+															className={`text-lg font-semibold ${arrivalDisplay.actualTextClass}`}
+														>
+															{arrivalDisplay.estimateLabel}
+														</span>
+													</div>
+												) : (
+													<div
+														className={`text-lg font-bold ${
+															dep.vehicleatstop
+																? "text-emerald-200"
+																: isTracked
+																	? "text-primary"
+																	: "text-foreground"
+														}`}
+													>
+														{arrivalDisplay.estimateLabel}
+													</div>
+												)}
 											</div>
 										</div>
 									</>
