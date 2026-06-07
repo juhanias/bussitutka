@@ -1,7 +1,6 @@
-import { MapPin, RotateCcw, Star, Trash2 } from "lucide-react";
+import { MapPin, Star, Trash2 } from "lucide-react";
 import { useMemo } from "react";
 import { useMediaQuery } from "../hooks/useMediaQuery";
-import { useCustomStopNamesStore } from "../store/customStopNames";
 import type { BusStop } from "../types/transport";
 import {
 	Dialog,
@@ -31,17 +30,11 @@ type FavoriteStopsMenuProps = {
 function FavoritesMenu({
 	isOpen,
 	favorites,
-	stops,
-	missingCount = 0,
 	onSelect,
 	onRemove,
 	onClose,
 }: FavoriteStopsMenuProps) {
 	const isDesktop = useMediaQuery("(min-width: 768px)");
-	const customNames = useCustomStopNamesStore((state) => state.customNames);
-	const resetCustomName = useCustomStopNamesStore(
-		(state) => state.resetCustomName,
-	);
 
 	const sortedFavorites = useMemo(
 		() =>
@@ -53,21 +46,7 @@ function FavoritesMenu({
 		[favorites],
 	);
 
-	const nicknameStops = useMemo(
-		() =>
-			stops
-				.filter((stop) => customNames.has(stop.stop_code))
-				.map((stop) => ({
-					stop,
-					customName: customNames.get(stop.stop_code) || stop.stop_name,
-				}))
-				.sort((a, b) =>
-					a.customName.localeCompare(b.customName, undefined, {
-						 sensitivity: "base",
-					}),
-				),
-			[stops, customNames],
-	);
+
 
 	const handleSelect = (stop: BusStop) => {
 		onSelect(stop);
