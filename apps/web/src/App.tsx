@@ -55,6 +55,7 @@ function App() {
 	const [stopInfo, setStopInfo] = useState<StopInfo>({
 		stop: null,
 		departures: [],
+		alerts: [],
 		loading: false,
 	});
 	const [mapRef, setMapRef] = useState<MaplibreMap | null>(null);

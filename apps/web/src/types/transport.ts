@@ -18,6 +18,41 @@ export interface Departure {
 	__tripref?: string;
 }
 
+export interface StopAlertImage {
+	url?: string;
+	type?: string;
+	title?: string;
+}
+
+export interface StopAlertTranslation {
+	header?: string;
+	message?: string;
+	information?: string;
+}
+
+export interface StopAlert {
+	icon?: string;
+	cause?: string;
+	effect?: string;
+	header?: string;
+	images?: StopAlertImage[];
+	repeat?: number[][];
+	message?: string;
+	isactive?: boolean;
+	priority?: number;
+	categories?: string[];
+	message_id?: number;
+	channel_web?: boolean;
+	information?: string;
+	translations?: Record<string, StopAlertTranslation>;
+	channel_stops?: boolean;
+	affected_stops?: string[];
+	channel_gtfsrt?: boolean;
+	channel_mobile?: boolean;
+	channel_ticker?: boolean;
+	affected_routes?: string[];
+}
+
 export interface Vehicle {
 	vehicleref: string;
 	lineref: string;
@@ -42,6 +77,7 @@ export interface VehiclePosition extends Vehicle {
 export interface StopInfo {
 	stop: BusStop | null;
 	departures: Departure[];
+	alerts: StopAlert[];
 	loading: boolean;
 }
 

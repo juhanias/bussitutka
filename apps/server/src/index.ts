@@ -7,8 +7,15 @@ import { buildStopSchedule, buildStopScheduleRange } from "./gtfs/schedule";
 import type { GtfsData } from "./gtfs/types";
 
 const SIRI_VM_URL = process.env.SIRI_VM_URL ?? "https://data.foli.fi/siri/vm";
+const SIRI_SM_BASE_URL =
+	process.env.SIRI_SM_BASE_URL ?? "https://data.foli.fi/siri/sm";
+const ALERTS_MESSAGES_URL =
+	process.env.ALERTS_MESSAGES_URL ?? "https://data.foli.fi/alerts/messages";
 const POLL_INTERVAL_MS = Number(process.env.SIRI_POLL_INTERVAL_MS ?? 4000);
 const STALE_AFTER_MS = Number(process.env.SIRI_STALE_AFTER_MS ?? 20000);
+const ALERTS_REFRESH_INTERVAL_MS = Number(
+	process.env.ALERTS_REFRESH_INTERVAL_MS ?? 60_000,
+);
 const MAX_IDS_PER_REQUEST = Number(process.env.SIRI_MAX_IDS_PER_REQUEST ?? 200);
 const MAX_GTFS_TRIPS_PER_REQUEST = Number(
 	process.env.GTFS_TRIPS_MAX_IDS ?? 60,
@@ -34,6 +41,81 @@ type SiriVmResponse = {
 	};
 };
 
+type SiriStopDeparture = {
+	lineref?: string;
+	destinationdisplay?: string;
+	aimedarrivaltime?: number;
+	expectedarrivaltime?: number;
+	aimeddeparturetime?: number;
+	expecteddeparturetime?: number;
+	vehicleatstop?: boolean;
+	monitored?: boolean;
+	vehicleref?: string;
+	__tripref?: string;
+};
+
+type SiriStopResponse = {
+	result?: SiriStopDeparture[];
+};
+
+type AlertImage = {
+	url?: string;
+	type?: string;
+	title?: string;
+};
+
+type AlertTranslation = {
+	header?: string;
+	message?: string;
+	information?: string;
+};
+
+type StopAlert = {
+	icon?: string;
+	cause?: string;
+	effect?: string;
+	header?: string;
+	images?: AlertImage[];
+	repeat?: number[][];
+	message?: string;
+	isactive?: boolean;
+	priority?: number;
+	categories?: string[];
+	message_id?: number;
+	channel_web?: boolean;
+	information?: string;
+	translations?: Record<string, AlertTranslation>;
+	channel_stops?: boolean;
+	affected_stops?: string[];
+	channel_gtfsrt?: boolean;
+	channel_mobile?: boolean;
+	channel_ticker?: boolean;
+	affected_routes?: string[];
+};
+
+type AlertsMessagesResponse = {
+	servertime?: number;
+	global_message?: Record<string, unknown>;
+	emergency_message?: Record<string, unknown>;
+	messages?: StopAlert[];
+};
+
+type CachedAlertsPayload = {
+	servertime: number | null;
+	messages: StopAlert[];
+	lastUpdated: number | null;
+	error: string | null;
+};
+
+type StopDetailsResponse = {
+	status: "ok";
+	stopCode: string;
+	departures: SiriStopDeparture[];
+	alerts: StopAlert[];
+	alertsLastUpdated: number | null;
+	alertsError: string | null;
+};
+
 type VehicleSnapshot = {
 	vehicleref: string;
 	lineref: string;
@@ -57,6 +139,12 @@ const vehicleCache = new Map<string, VehicleSnapshot>();
 let lastUpdated: number | null = null;
 let lastSourceTimestamp: number | null = null;
 let lastError: string | null = null;
+let alertsCache: CachedAlertsPayload = {
+	servertime: null,
+	messages: [],
+	lastUpdated: null,
+	error: null,
+};
 
 let gtfsData: GtfsData | null = null;
 let gtfsLoadedFrom: string | null = null;
@@ -137,10 +225,54 @@ const refreshVehicleCache = async () => {
 	}
 };
 
+const normalizeAlert = (raw: StopAlert): StopAlert | null => {
+	if (!raw.isactive) return null;
+
+	const affectedStops = raw.affected_stops
+		?.map((stopCode) => stopCode.trim())
+		.filter(Boolean);
+
+	if (!affectedStops?.length) return null;
+
+	return {
+		...raw,
+		affected_stops: affectedStops,
+	};
+};
+
+const refreshAlertsCache = async () => {
+	try {
+		const response = await fetch(ALERTS_MESSAGES_URL);
+		if (!response.ok) {
+			throw new Error(`alerts responded with ${response.status}`);
+		}
+
+		const payload = (await response.json()) as AlertsMessagesResponse;
+		const messages = (payload.messages ?? [])
+			.map(normalizeAlert)
+			.filter((alert): alert is StopAlert => Boolean(alert));
+
+		alertsCache = {
+			servertime:
+				typeof payload.servertime === "number" ? payload.servertime : null,
+			messages,
+			lastUpdated: Date.now(),
+			error: null,
+		};
+	} catch (error) {
+		alertsCache = {
+			...alertsCache,
+			error: error instanceof Error ? error.message : "unknown error",
+		};
+	}
+};
+
 const startPolling = () => {
 	// keep polling server-side so the browser does not have to pull the full VM payload
 	void refreshVehicleCache();
 	setInterval(refreshVehicleCache, POLL_INTERVAL_MS);
+	void refreshAlertsCache();
+	setInterval(refreshAlertsCache, ALERTS_REFRESH_INTERVAL_MS);
 };
 
 const buildVehicleList = (ids: string[]): VehicleSnapshot[] => {
@@ -216,6 +348,42 @@ const buildTripShapesResponse = (
 	};
 };
 
+const buildAlertsResponse = (
+	set: { headers: Record<string, string> },
+): CachedAlertsPayload & { status: "ok" } => {
+	set.headers["Cache-Control"] = "no-store";
+	return {
+		status: "ok",
+		...alertsCache,
+	};
+};
+
+const fetchStopDetails = async (
+	stopCode: string,
+): Promise<StopDetailsResponse> => {
+	const response = await fetch(
+		`${SIRI_SM_BASE_URL}/${encodeURIComponent(stopCode)}`,
+	);
+	if (!response.ok) {
+		throw new Error(`siri sm responded with ${response.status}`);
+	}
+
+	const payload = (await response.json()) as SiriStopResponse;
+	const departures = (payload.result ?? []).slice(0, 10);
+	const alerts = alertsCache.messages.filter((alert) =>
+		alert.affected_stops?.includes(stopCode),
+	);
+
+	return {
+		status: "ok",
+		stopCode,
+		departures,
+		alerts,
+		alertsLastUpdated: alertsCache.lastUpdated,
+		alertsError: alertsCache.error,
+	};
+};
+
 const refreshGtfs = async () => {
 	if (gtfsLoadingPromise) return gtfsLoadingPromise;
 	gtfsLoadingPromise = (async () => {
@@ -288,6 +456,27 @@ const app = new Elysia()
 		gtfsLastRefresh,
 		gtfsLoadedFrom,
 	}))
+	.get("/api/alerts/stops", ({ set }) => buildAlertsResponse(set))
+	.get("/api/stops/:stopCode", async ({ params, set }) => {
+		const stopCode = params.stopCode?.trim();
+
+		if (!stopCode) {
+			set.status = 400;
+			return { status: "error", message: "stopCode required" };
+		}
+
+		try {
+			set.headers["Cache-Control"] = "no-store";
+			return await fetchStopDetails(stopCode);
+		} catch (error) {
+			set.status = 502;
+			return {
+				status: "error",
+				message:
+					error instanceof Error ? error.message : "failed to fetch stop details",
+			};
+		}
+	})
 	.post("/api/gtfs/shapes", ({ body, set }) => {
 		const tripIds = normalizeTripIds(body as TripIdsInput);
 		return buildTripShapesResponse(tripIds, set);

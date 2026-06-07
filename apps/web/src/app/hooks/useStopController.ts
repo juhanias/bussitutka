@@ -4,7 +4,8 @@ import { useCallback, useEffect } from "react";
 import type { MapMouseEvent } from "react-map-gl/maplibre";
 
 import { STOP_FLY_TO_DURATION_MS, STOP_FLY_TO_ZOOM } from "@/app/appConstants";
-import type { BusStop, Departure, StopInfo } from "@/types/transport";
+import { STOP_DETAILS_ENDPOINT } from "@/constants/endpoints";
+import type { BusStop, Departure, StopAlert, StopInfo } from "@/types/transport";
 
 type Params = {
 	stops: BusStop[];
@@ -16,6 +17,11 @@ type Params = {
 	setTrackedVehicleRef: (ref: string | null) => void;
 	setIsSidebarVisible: (visible: boolean) => void;
 	closeSearch: () => void;
+};
+
+type StopDetailsResponse = {
+	departures?: Departure[];
+	alerts?: StopAlert[];
 };
 
 export function useStopController({
@@ -57,16 +63,18 @@ export function useStopController({
 			setStopInfo({
 				stop,
 				departures: [],
+				alerts: [],
 				loading: true,
 			});
 
-			fetch(`https://data.foli.fi/siri/sm/${stop.stop_code}`)
+			fetch(`${STOP_DETAILS_ENDPOINT}/${encodeURIComponent(stop.stop_code)}`)
 				.then((res) => res.json())
 				.then((data) => {
-					const departures = (data.result || []).slice(0, 10) as Departure[];
+					const { departures = [], alerts = [] } = data as StopDetailsResponse;
 					setStopInfo((prev) => ({
 						...prev,
 						departures,
+						alerts,
 						loading: false,
 					}));
 					loadRoutes(departures);
@@ -117,7 +125,7 @@ export function useStopController({
 	);
 
 	const handleClose = useCallback(() => {
-		setStopInfo({ stop: null, departures: [], loading: false });
+		setStopInfo({ stop: null, departures: [], alerts: [], loading: false });
 		loadRoutes([]);
 		setTrackedVehicleRef(null);
 		setSelectedStopCode(null);
@@ -159,7 +167,7 @@ export function useStopController({
 		if (!stopInfo.stop) return;
 
 		loadRoutes([]);
-		setStopInfo({ stop: null, departures: [], loading: false });
+		setStopInfo({ stop: null, departures: [], alerts: [], loading: false });
 		setTrackedVehicleRef(null);
 		setIsSidebarVisible(false);
 		dismissTrackingToast();

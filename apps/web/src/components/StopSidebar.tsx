@@ -10,10 +10,17 @@ import { useStopSchedule } from "../hooks/useStopSchedule";
 import { useCustomStopNamesStore } from "../store/customStopNames";
 import { useFavoritesStore } from "../store/favorites";
 import { useUiHintsStore } from "../store/uiHints";
-import type { Departure, ScheduleDay, StopInfo } from "../types/transport";
+import type { Departure, ScheduleDay, StopAlert, StopInfo } from "../types/transport";
 import { formatMinutesUntil, formatTime } from "../utils/time";
 import { EditStopNameDialog } from "./EditStopNameDialog";
 import UiHint from "./UiHint";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogHeader,
+	DialogTitle,
+} from "./ui/dialog";
 import {
 	Drawer,
 	DrawerClose,
@@ -51,6 +58,18 @@ const MISSING_VEHICLE_BODY = {
 
 const ARRIVAL_VARIANCE_THRESHOLD_SECONDS = 60;
 
+const normalizeAlertImageUrl = (url?: string) => {
+	if (!url) return null;
+	if (url.startsWith("//")) return `https:${url}`;
+	return url;
+};
+
+const getAlertSummary = (alert: StopAlert) =>
+	alert.message?.trim() || alert.information?.trim() || "";
+
+const hasAlertDetails = (alert: StopAlert) =>
+	Boolean(alert.information?.trim() || alert.images?.length);
+
 function getArrivalDisplay(dep: Departure) {
 	const scheduledTime =
 		dep.aimeddeparturetime ??
@@ -74,16 +93,21 @@ function getArrivalDisplay(dep: Departure) {
 			scheduledLabel: formatMinutesUntil(scheduledTime),
 			estimateLabel: "Nyt",
 			isShifted,
+			showCountdownComparison: false,
 			actualTextClass: "text-emerald-200",
 		};
 	}
 
+	const scheduledLabel = formatMinutesUntil(scheduledTime);
+	const estimateLabel = formatMinutesUntil(estimateTime);
+
 	return {
 		scheduledClock: formatTime(scheduledTime),
 		estimateClock: formatTime(estimateTime),
-		scheduledLabel: formatMinutesUntil(scheduledTime),
-		estimateLabel: formatMinutesUntil(estimateTime),
+		scheduledLabel,
+		estimateLabel,
 		isShifted,
+		showCountdownComparison: isShifted && scheduledLabel !== estimateLabel,
 		actualTextClass: isLate
 			? "text-rose-200"
 			: isEarly
@@ -434,6 +458,7 @@ function StopSidebar({
 }: StopSidebarProps) {
 	const [activeTab, setActiveTab] = useState<TabType>("realtime");
 	const [editDialogOpen, setEditDialogOpen] = useState(false);
+	const [selectedAlert, setSelectedAlert] = useState<StopAlert | null>(null);
 	const { favoriteStops, toggleFavorite } = useFavoritesStore();
 	const { getDisplayName } = useCustomStopNamesStore();
 	const dismissHint = useUiHintsStore((state) => state.dismissHint);
@@ -465,13 +490,21 @@ function StopSidebar({
 		<div className="flex h-full flex-col text-foreground">
 			<div className="flex items-start justify-between gap-4 px-5 pt-6 pb-2">
 				<div className="min-w-0 flex-1 text-left">
-					<div className="mb-1 text-xs font-medium tracking-wider text-muted-foreground">
+					<div className="mb-1 text-xs font-medium text-muted-foreground">
 						Pysäkki {stop.stop_code}
 					</div>
 					<div className="mb-1 flex items-center gap-2">
 						<h2 className="truncate text-2xl font-bold leading-tight text-foreground">
 							{displayName}
 						</h2>
+						<button
+							type="button"
+							onClick={() => toggleFavorite(stop.stop_code)}
+							className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground/40 transition-colors hover:bg-muted hover:text-foreground"
+							title={isFavorite ? "Poista suosikeista" : "Lisää suosikiksi"}
+						>
+							{isFavorite ? "★" : "☆"}
+						</button>
 						<button
 							type="button"
 							onClick={() => setEditDialogOpen(true)}
@@ -483,14 +516,6 @@ function StopSidebar({
 					</div>
 				</div>
 				<div className="flex shrink-0 items-center gap-2">
-					<button
-						type="button"
-						onClick={() => toggleFavorite(stop.stop_code)}
-						className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground/40 transition-colors hover:bg-muted hover:text-foreground"
-						title={isFavorite ? "Poista suosikeista" : "Lisää suosikiksi"}
-					>
-						{isFavorite ? "★" : "☆"}
-					</button>
 					{isDesktop ? (
 						<button
 							type="button"
@@ -538,6 +563,48 @@ function StopSidebar({
 					</button>
 				</div>
 			</div>
+
+			{stopInfo.alerts.length > 0 && (
+				<div className="px-5 pb-3">
+					<div className="space-y-2">
+						{stopInfo.alerts.map((alert) => {
+							const isExpandable = hasAlertDetails(alert);
+							const summary = getAlertSummary(alert);
+
+							return (
+								<button
+									key={alert.message_id ?? alert.header ?? summary}
+									type="button"
+									onClick={() => {
+										if (isExpandable) {
+											setSelectedAlert(alert);
+										}
+									}}
+									className={`w-full rounded-xl border border-amber-200/20 px-4 py-3 text-left ${
+										isExpandable
+											? "cursor-pointer transition-colors hover:border-amber-200/35"
+											: "cursor-default"
+									}`}
+								>
+									<div className="text-sm font-semibold text-foreground">
+										{alert.header}
+									</div>
+									{summary && (
+										<div className="mt-1 whitespace-pre-line text-sm text-foreground/78">
+											{summary}
+										</div>
+									)}
+									{isExpandable && (
+										<div className="mt-2 text-xs font-medium text-amber-100/80">
+											Näytä lisätiedot
+										</div>
+									)}
+								</button>
+							);
+						})}
+					</div>
+				</div>
+			)}
 
 			<UiHint
 				id="busstop.mapview.hint"
@@ -620,7 +687,7 @@ function StopSidebar({
 											{!hasVehicle && <MissingVehicleHelp />}
 
 											<div className="min-w-14 text-right">
-												{arrivalDisplay.isShifted ? (
+												{arrivalDisplay.showCountdownComparison ? (
 													<div className="flex items-center justify-end gap-2">
 														<span className="text-lg font-medium text-foreground/55 line-through">
 															{arrivalDisplay.scheduledLabel}
@@ -714,6 +781,45 @@ function StopSidebar({
 						originalName={stop.stop_name}
 					/>
 				)}
+				<Dialog
+					open={Boolean(selectedAlert)}
+					onOpenChange={(open) => !open && setSelectedAlert(null)}
+				>
+					<DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+						{selectedAlert && (
+							<>
+								<DialogHeader>
+									<DialogTitle>{selectedAlert.header}</DialogTitle>
+									<DialogDescription className="whitespace-pre-line text-sm text-foreground/75">
+										{getAlertSummary(selectedAlert)}
+									</DialogDescription>
+								</DialogHeader>
+								{selectedAlert.information?.trim() && (
+									<div className="whitespace-pre-line text-sm leading-6 text-foreground/85">
+										{selectedAlert.information}
+									</div>
+								)}
+								{selectedAlert.images?.length ? (
+									<div className="space-y-3">
+										{selectedAlert.images.map((image, index) => {
+											const src = normalizeAlertImageUrl(image.url);
+											if (!src) return null;
+
+											return (
+												<img
+													key={`${image.url ?? "alert-image"}-${index}`}
+													src={src}
+													alt={image.title || selectedAlert.header || "Häiriötiedote"}
+													className="w-full rounded-lg border border-border object-cover"
+												/>
+											);
+										})}
+									</div>
+								) : null}
+							</>
+						)}
+					</DialogContent>
+				</Dialog>
 			</>
 		);
 	}
@@ -737,6 +843,45 @@ function StopSidebar({
 					originalName={stop.stop_name}
 				/>
 			)}
+			<Dialog
+				open={Boolean(selectedAlert)}
+				onOpenChange={(open) => !open && setSelectedAlert(null)}
+			>
+				<DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+					{selectedAlert && (
+						<>
+							<DialogHeader>
+								<DialogTitle>{selectedAlert.header}</DialogTitle>
+								<DialogDescription className="whitespace-pre-line text-sm text-foreground/75">
+									{getAlertSummary(selectedAlert)}
+								</DialogDescription>
+							</DialogHeader>
+							{selectedAlert.information?.trim() && (
+								<div className="whitespace-pre-line text-sm leading-6 text-foreground/85">
+									{selectedAlert.information}
+								</div>
+							)}
+							{selectedAlert.images?.length ? (
+								<div className="space-y-3">
+									{selectedAlert.images.map((image, index) => {
+										const src = normalizeAlertImageUrl(image.url);
+										if (!src) return null;
+
+										return (
+											<img
+												key={`${image.url ?? "alert-image"}-${index}`}
+												src={src}
+												alt={image.title || selectedAlert.header || "Häiriötiedote"}
+												className="w-full rounded-lg border border-border object-cover"
+											/>
+										);
+									})}
+								</div>
+							) : null}
+						</>
+					)}
+				</DialogContent>
+			</Dialog>
 		</>
 	);
 }

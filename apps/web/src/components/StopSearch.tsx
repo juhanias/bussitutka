@@ -7,7 +7,9 @@ import {
 	useState,
 } from "react";
 
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
+import { useMediaQuery } from "../hooks/useMediaQuery";
 import type { BusStop } from "../types/transport";
 
 const MAX_RESULTS = 50;
@@ -23,6 +25,7 @@ function StopSearch({ isOpen, stops, onSelect, onClose }: StopSearchProps) {
 	const [query, setQuery] = useState("");
 	const [activeIndex, setActiveIndex] = useState(0);
 	const inputRef = useRef<HTMLInputElement>(null);
+	const isDesktop = useMediaQuery("(min-width: 768px)");
 
 	useEffect(() => {
 		if (!isOpen) return;
@@ -85,57 +88,75 @@ function StopSearch({ isOpen, stops, onSelect, onClose }: StopSearchProps) {
 		}
 	};
 
-	return (
-		<Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-			<DialogContent showCloseButton={false} className="gap-0 p-0 sm:max-w-xl">
-				<div className="flex items-center border-b border-border px-4 py-3">
-					<Search className="mr-3 h-5 w-5 text-muted-foreground" />
-					<input
-						ref={inputRef}
-						value={query}
-						onChange={(event) => setQuery(event.target.value)}
-						onKeyDown={handleInputKeyDown}
-						className="flex-1 bg-transparent text-base text-foreground outline-none placeholder:text-muted-foreground"
-						placeholder="search stops..."
-						aria-label="Search stops"
-					/>
-					<div className="ml-2 hidden rounded border border-border bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground sm:block">
-						ESC
-					</div>
+	const listContent = (
+		<>
+			<div className="flex items-center border-b border-border px-4 py-3">
+				<Search className="mr-3 h-5 w-5 text-muted-foreground" />
+				<input
+					ref={inputRef}
+					value={query}
+					onChange={(event) => setQuery(event.target.value)}
+					onKeyDown={handleInputKeyDown}
+					className="flex-1 bg-transparent text-base text-foreground outline-none placeholder:text-muted-foreground"
+					placeholder="Hae pysäkkiä..."
+					aria-label="Hae pysäkkiä"
+				/>
+				<div className="ml-2 hidden rounded border border-border bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground sm:block">
+					ESC
 				</div>
+			</div>
 
-				<div className="max-h-[60vh] overflow-y-auto p-2">
-					{filteredStops.length === 0 ? (
-						<div className="py-12 text-center text-sm text-muted-foreground">
-							Ei tuloksia
-						</div>
-					) : (
-						<ul className="space-y-0.5">
-							{filteredStops.map((stop, index) => (
-								<li key={stop.stop_code}>
-									<button
-										type="button"
-										onClick={() => handleSelect(stop)}
-										className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left transition-colors ${
-											index === activeIndex
-												? "bg-primary/15 text-primary"
-												: "text-foreground/80 hover:bg-muted hover:text-foreground"
-										}`}
-									>
-										<span className="truncate font-medium">
-											{stop.stop_name}
-										</span>
-										<span className="ml-2 shrink-0 font-mono text-xs text-muted-foreground">
-											{stop.stop_code}
-										</span>
-									</button>
-								</li>
-							))}
-						</ul>
-					)}
-				</div>
-			</DialogContent>
-		</Dialog>
+			<div className="max-h-[60vh] overflow-y-auto p-2">
+				{filteredStops.length === 0 ? (
+					<div className="py-12 text-center text-sm text-muted-foreground">
+						Ei tuloksia
+					</div>
+				) : (
+					<ul className="space-y-0.5">
+						{filteredStops.map((stop, index) => (
+							<li key={stop.stop_code}>
+								<button
+									type="button"
+									onClick={() => handleSelect(stop)}
+									className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left transition-colors ${
+										index === activeIndex
+											? "bg-primary/15 text-primary"
+											: "text-foreground/80 hover:bg-muted hover:text-foreground"
+									}`}
+								>
+									<span className="truncate font-medium">
+										{stop.stop_name}
+									</span>
+									<span className="ml-2 shrink-0 font-mono text-xs text-muted-foreground">
+										{stop.stop_code}
+									</span>
+								</button>
+							</li>
+						))}
+					</ul>
+				)}
+			</div>
+		</>
+	);
+
+	if (isDesktop) {
+		return (
+			<Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+				<DialogContent showCloseButton={false} className="gap-0 p-0 sm:max-w-xl">
+					<DialogTitle className="sr-only">Etsi pysäkkiä</DialogTitle>
+					{listContent}
+				</DialogContent>
+			</Dialog>
+		);
+	}
+
+	return (
+		<Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
+			<DrawerContent className="gap-0 p-0">
+				<DrawerTitle className="sr-only">Etsi pysäkkiä</DrawerTitle>
+				{listContent}
+			</DrawerContent>
+		</Drawer>
 	);
 }
 
