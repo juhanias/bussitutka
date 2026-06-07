@@ -20,7 +20,7 @@ export default defineConfig({
 				name: "Bussitutka",
 				short_name: "Bussitutka",
 				description: "Real-time bus tracker for Turku region (Föli)",
-				theme_color: "#e53935",
+				theme_color: "#06b6d4",
 				background_color: "#1a1a2e",
 				display: "standalone",
 				start_url: "/",

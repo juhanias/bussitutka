@@ -4,13 +4,19 @@ import {
 	useMemo,
 	useState,
 } from "react";
+import { Pencil, Star } from "lucide-react";
 import { getLineColor } from "../constants/layers";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 import { useStopSchedule } from "../hooks/useStopSchedule";
 import { useCustomStopNamesStore } from "../store/customStopNames";
 import { useFavoritesStore } from "../store/favorites";
 import { useUiHintsStore } from "../store/uiHints";
-import type { Departure, ScheduleDay, StopAlert, StopInfo } from "../types/transport";
+import type {
+	Departure,
+	ScheduleDay,
+	StopAlert,
+	StopInfo,
+} from "../types/transport";
 import { formatMinutesUntil, formatTime } from "../utils/time";
 import { EditStopNameDialog } from "./EditStopNameDialog";
 import UiHint from "./UiHint";
@@ -94,7 +100,7 @@ function getArrivalDisplay(dep: Departure) {
 			estimateLabel: "Nyt",
 			isShifted,
 			showCountdownComparison: false,
-			actualTextClass: "text-emerald-200",
+			actualTextClass: "text-green-400",
 		};
 	}
 
@@ -109,9 +115,9 @@ function getArrivalDisplay(dep: Departure) {
 		isShifted,
 		showCountdownComparison: isShifted && scheduledLabel !== estimateLabel,
 		actualTextClass: isLate
-			? "text-rose-200"
+			? "text-red-400"
 			: isEarly
-				? "text-amber-200"
+				? "text-amber-400"
 				: "text-foreground",
 	};
 }
@@ -162,7 +168,7 @@ function MissingVehicleHelp() {
 					<DrawerClose asChild>
 						<button
 							type="button"
-							className="w-full rounded-lg bg-muted px-3 py-2.5 text-sm font-medium text-foreground/80 transition-colors hover:bg-muted/80"
+							className="w-full rounded-lg bg-muted px-3 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted/80 hover:text-foreground"
 						>
 							Asia selvä
 						</button>
@@ -490,28 +496,37 @@ function StopSidebar({
 		<div className="flex h-full flex-col text-foreground">
 			<div className="flex items-start justify-between gap-4 px-5 pt-6 pb-2">
 				<div className="min-w-0 flex-1 text-left">
-					<div className="mb-1 text-xs font-medium text-muted-foreground">
-						Pysäkki {stop.stop_code}
+					<div className="mb-2">
+						<span className="inline-flex items-center rounded-md bg-primary px-2.5 py-0.5 text-xs font-bold text-primary-foreground">
+							{stop.stop_code}
+						</span>
 					</div>
-					<div className="mb-1 flex items-center gap-2">
+					<div className="mb-2 flex items-center">
 						<h2 className="truncate text-2xl font-bold leading-tight text-foreground">
 							{displayName}
 						</h2>
+					</div>
+					{stop.stop_name !== displayName && (
+						<div className="mb-3 text-xs text-muted-foreground">
+							Alkuperäinen: {stop.stop_name}
+						</div>
+					)}
+					<div className="flex flex-wrap gap-2">
 						<button
 							type="button"
 							onClick={() => toggleFavorite(stop.stop_code)}
-							className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground/40 transition-colors hover:bg-muted hover:text-foreground"
-							title={isFavorite ? "Poista suosikeista" : "Lisää suosikiksi"}
+							className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-transparent px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-card hover:border-primary/40 focus:outline-none focus:ring-2 focus:ring-ring cursor-pointer"
 						>
-							{isFavorite ? "★" : "☆"}
+							<Star className={`h-3.5 w-3.5 ${isFavorite ? "fill-primary text-primary" : "text-foreground/60"}`} />
+							<span>Suosikki</span>
 						</button>
 						<button
 							type="button"
 							onClick={() => setEditDialogOpen(true)}
-							className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground/40 transition-colors hover:bg-muted hover:text-foreground"
-							title="Muokkaa pysäkin lempinimeä"
+							className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-transparent px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-card hover:border-primary/40 focus:outline-none focus:ring-2 focus:ring-ring cursor-pointer"
 						>
-							✎
+							<Pencil className="h-3.5 w-3.5 text-foreground/60" />
+							<span>Lempinimi</span>
 						</button>
 					</div>
 				</div>
@@ -809,7 +824,11 @@ function StopSidebar({
 												<img
 													key={`${image.url ?? "alert-image"}-${index}`}
 													src={src}
-													alt={image.title || selectedAlert.header || "Häiriötiedote"}
+													alt={
+														image.title ||
+														selectedAlert.header ||
+														"Häiriötiedote"
+													}
 													className="w-full rounded-lg border border-border object-cover"
 												/>
 											);
@@ -871,7 +890,9 @@ function StopSidebar({
 											<img
 												key={`${image.url ?? "alert-image"}-${index}`}
 												src={src}
-												alt={image.title || selectedAlert.header || "Häiriötiedote"}
+												alt={
+													image.title || selectedAlert.header || "Häiriötiedote"
+												}
 												className="w-full rounded-lg border border-border object-cover"
 											/>
 										);

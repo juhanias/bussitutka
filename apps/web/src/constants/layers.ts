@@ -14,11 +14,11 @@ const STOP_CIRCLE_RADIUS_ZOOM = { z1: 13, r1: 4, z2: 16, r2: 8 };
 const FAVORITE_SHADOW_RADIUS_STOPS = [10, 6, 13, 10, 16, 14] as const;
 const FAVORITE_CIRCLE_RADIUS_STOPS = [10, 5, 13, 8, 16, 12] as const;
 
-export const DEFAULT_LINE_COLOR = "#ff8c00";
-export const DEFAULT_LINE_OUTLINE_COLOR = "#cc6600";
+export const DEFAULT_LINE_COLOR = "#f97316";
+export const DEFAULT_LINE_OUTLINE_COLOR = "#c2410c";
 
-const STOP_PRIMARY_COLOR = "#1e88e5";
-const STOP_FAVORITE_COLOR = "#f59e0b";
+const STOP_PRIMARY_COLOR = "#f97316";
+const STOP_FAVORITE_COLOR = "#fbbf24";
 const STOP_SHADOW_COLOR = "rgba(0,0,0,0.3)";
 const FAVORITE_SHADOW_COLOR = "rgba(0,0,0,0.4)";
 
@@ -67,8 +67,8 @@ export const stopsCircleLayer = (theme: "light" | "dark"): LayerProps => ({
 			STOP_CIRCLE_RADIUS_ZOOM.z2,
 			STOP_CIRCLE_RADIUS_ZOOM.r2,
 		],
-		"circle-color": theme === "dark" ? "#125ea1" : STOP_PRIMARY_COLOR,
-		"circle-stroke-color": theme === "dark" ? "#ffffff" : "#ffffff",
+		"circle-color": theme === "dark" ? "#ea580c" : STOP_PRIMARY_COLOR,
+		"circle-stroke-color": theme === "dark" ? "#fff7ed" : "#ffffff",
 		"circle-stroke-width": 2,
 		"circle-opacity": stopFadeInByZoom,
 		"circle-stroke-opacity": stopFadeInByZoom,

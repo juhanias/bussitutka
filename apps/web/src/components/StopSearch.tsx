@@ -124,9 +124,7 @@ function StopSearch({ isOpen, stops, onSelect, onClose }: StopSearchProps) {
 											: "text-foreground/80 hover:bg-muted hover:text-foreground"
 									}`}
 								>
-									<span className="truncate font-medium">
-										{stop.stop_name}
-									</span>
+									<span className="truncate font-medium">{stop.stop_name}</span>
 									<span className="ml-2 shrink-0 font-mono text-xs text-muted-foreground">
 										{stop.stop_code}
 									</span>
@@ -142,7 +140,10 @@ function StopSearch({ isOpen, stops, onSelect, onClose }: StopSearchProps) {
 	if (isDesktop) {
 		return (
 			<Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-				<DialogContent showCloseButton={false} className="gap-0 p-0 sm:max-w-xl">
+				<DialogContent
+					showCloseButton={false}
+					className="gap-0 p-0 sm:max-w-xl"
+				>
 					<DialogTitle className="sr-only">Etsi pysäkkiä</DialogTitle>
 					{listContent}
 				</DialogContent>

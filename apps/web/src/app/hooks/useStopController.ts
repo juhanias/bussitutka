@@ -5,7 +5,12 @@ import type { MapMouseEvent } from "react-map-gl/maplibre";
 
 import { STOP_FLY_TO_DURATION_MS, STOP_FLY_TO_ZOOM } from "@/app/appConstants";
 import { STOP_DETAILS_ENDPOINT } from "@/constants/endpoints";
-import type { BusStop, Departure, StopAlert, StopInfo } from "@/types/transport";
+import type {
+	BusStop,
+	Departure,
+	StopAlert,
+	StopInfo,
+} from "@/types/transport";
 
 type Params = {
 	stops: BusStop[];

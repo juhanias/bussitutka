@@ -86,7 +86,7 @@ export function MapView({
 				>
 					<div
 						role="img"
-						className="h-4 w-4 rounded-full bg-amber-300 ring-2 ring-black/40"
+						className="h-4 w-4 rounded-full bg-primary ring-2 ring-background"
 						aria-label="oma sijainti"
 					/>
 				</Marker>

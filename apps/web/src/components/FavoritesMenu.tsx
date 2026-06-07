@@ -1,7 +1,7 @@
 import { MapPin, RotateCcw, Star, Trash2 } from "lucide-react";
 import { useMemo } from "react";
-import { useCustomStopNamesStore } from "../store/customStopNames";
 import { useMediaQuery } from "../hooks/useMediaQuery";
+import { useCustomStopNamesStore } from "../store/customStopNames";
 import type { BusStop } from "../types/transport";
 import {
 	Dialog,
@@ -47,9 +47,9 @@ function FavoritesMenu({
 		() =>
 			favorites.slice().sort((a, b) =>
 				a.stop_name.localeCompare(b.stop_name, undefined, {
-					sensitivity: "base",
+					 sensitivity: "base",
 				}),
-			),
+		),
 		[favorites],
 	);
 
@@ -63,10 +63,10 @@ function FavoritesMenu({
 				}))
 				.sort((a, b) =>
 					a.customName.localeCompare(b.customName, undefined, {
-						sensitivity: "base",
+						 sensitivity: "base",
 					}),
 				),
-		[stops, customNames],
+			[stops, customNames],
 	);
 
 	const handleSelect = (stop: BusStop) => {
@@ -94,9 +94,9 @@ function FavoritesMenu({
 						<li key={stop.stop_code}>
 							<div className="group flex items-center gap-2 rounded-lg p-2 transition-colors hover:bg-muted">
 								<button
-									type="button"
-									onClick={() => handleSelect(stop)}
-									className="flex flex-1 items-center gap-3 overflow-hidden text-left outline-none"
+								  type="button"
+								  onClick={() => handleSelect(stop)}
+								  className="flex flex-1 items-center gap-3 overflow-hidden text-left outline-none"
 								>
 									<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
 										<MapPin className="h-4 w-4" />
@@ -112,10 +112,10 @@ function FavoritesMenu({
 								</button>
 
 								<button
-									type="button"
-									onClick={() => onRemove(stop.stop_code)}
-									className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground/50 transition-colors hover:bg-destructive/20 hover:text-destructive focus-visible:bg-destructive/20 focus-visible:text-destructive focus-visible:outline-none"
-									aria-label={`poista ${stop.stop_name} suosikeista`}
+								  type="button"
+								  onClick={() => onRemove(stop.stop_code)}
+								  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground/50 transition-colors hover:bg-destructive/20 hover:text-destructive focus-visible:bg-destructive/20 focus-visible:text-destructive focus-visible:outline-none"
+								  aria-label={`poista ${stop.stop_name} suosikeista`}
 								>
 									<Trash2 className="h-4 w-4" />
 								</button>
@@ -124,68 +124,11 @@ function FavoritesMenu({
 					))}
 				</ul>
 			)}
-
-			{missingCount > 0 && (
-				<div className="m-2 rounded-lg border border-primary/20 bg-primary/10 px-3 py-2 text-center text-xs text-primary/80">
-					{missingCount}{" "}
-					{missingCount === 1
-						? "Tallennettu pysäkki ei ole enää"
-						: "Tallennettuja pysäkkejä ei ole enää"}{" "}
-					nykyisessä aikataulutiedossa.
-				</div>
-			)}
-
-			{nicknameStops.length > 0 && (
-				<div className="px-2 pb-2 pt-4">
-					<div className="space-y-1 px-2 pb-2">
-						<p className="text-xs font-semibold text-muted-foreground">
-							Lempinimen omaavat pysäkit
-						</p>
-						<p className="text-xs text-muted-foreground">
-							Pysäkit, joille olet antanut oman lempinimen
-						</p>
-					</div>
-					<ul className="space-y-0.5">
-						{nicknameStops.map(({ stop, customName }) => (
-							<li key={stop.stop_code}>
-								<div className="group flex items-center gap-2 rounded-lg p-2 transition-colors hover:bg-muted">
-									<button
-										type="button"
-										onClick={() => handleSelect(stop)}
-										className="flex flex-1 items-center gap-3 overflow-hidden text-left outline-none"
-									>
-										<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
-											<MapPin className="h-4 w-4" />
-										</div>
-										<div className="min-w-0 flex-1">
-											<p className="truncate text-sm font-medium text-foreground">
-												{customName}
-											</p>
-											<p className="truncate text-xs text-muted-foreground">
-												{stop.stop_code}
-											</p>
-										</div>
-									</button>
-									<button
-										type="button"
-										onClick={() => resetCustomName(stop.stop_code)}
-										className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground/50 transition-colors hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground focus-visible:outline-none"
-										aria-label={`palauta lempinimi pysäkille ${stop.stop_name}`}
-										title="Palauta lempinimi"
-									>
-										<RotateCcw className="h-4 w-4" />
-									</button>
-								</div>
-							</li>
-						))}
-					</ul>
-				</div>
-			)}
 		</div>
 	);
 
-	if (isDesktop) {
-		return (
+	return (
+		<>{isDesktop ? (
 			<Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
 				<DialogContent className="gap-0 p-0 sm:max-w-md">
 					<DialogHeader className="border-b border-border px-6 py-4">
@@ -200,24 +143,22 @@ function FavoritesMenu({
 					{listContent}
 				</DialogContent>
 			</Dialog>
-		);
-	}
+		) : (
+			<Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
+				<DrawerContent>
+					<DrawerHeader className="border-b border-border px-6 py-4 text-left">
+						<DrawerTitle className="text-lg font-semibold text-foreground">
+							Suosikkipysäkit
+						</DrawerTitle>
+						<DrawerDescription className="text-muted-foreground">
+							Hallitse tallennettuja pysäkkejä
+						</DrawerDescription>
+					</DrawerHeader>
 
-	return (
-		<Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
-			<DrawerContent>
-				<DrawerHeader className="border-b border-border px-6 py-4 text-left">
-					<DrawerTitle className="text-lg font-semibold text-foreground">
-						Suosikkipysäkit
-					</DrawerTitle>
-					<DrawerDescription className="text-muted-foreground">
-						Hallitse tallennettuja pysäkkejä
-					</DrawerDescription>
-				</DrawerHeader>
-
-				{listContent}
-			</DrawerContent>
-		</Drawer>
+					{listContent}
+				</DrawerContent>
+			</Drawer>
+		)}</>
 	);
 }
 
